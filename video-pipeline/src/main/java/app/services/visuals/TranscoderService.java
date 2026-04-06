@@ -1,11 +1,9 @@
 package app.services.visuals;
 
 import app.common.PipelineException;
-import app.common.PipelineStage;
 import app.model.TranscodedVideo;
 import app.model.VisualsContext;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -20,7 +18,7 @@ import java.util.List;
  *
  * Future optimization: run 3 codec groups in parallel via CompletableFuture.
  */
-public class TranscoderService implements PipelineStage<VisualsContext, List<TranscodedVideo>> {
+public class TranscoderService extends SubprocessStage<List<TranscodedVideo>> {
 
     private static final String[][] CODECS = {
             {"libx264", "h264", "mp4"},
@@ -93,19 +91,7 @@ public class TranscoderService implements PipelineStage<VisualsContext, List<Tra
 
         command.add(outputPath);
 
-        ProcessBuilder pb = new ProcessBuilder(command);
-        pb.redirectErrorStream(true);
-
-        Process process = pb.start();
-
-        String output = new String(process.getInputStream().readAllBytes());
-
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            throw new PipelineException(
-                    "FFmpeg failed (" + codec[1] + " " + resolution[0] + ")\n" + output, "PROCESSING");
-        }
+        runProcess(command);
 
         return new TranscodedVideo(outputPath, codec[1], resolution[0]);
     }
@@ -122,4 +108,8 @@ public class TranscoderService implements PipelineStage<VisualsContext, List<Tra
         );
     }
 
+    @Override
+    protected String getStageName() {
+        return "PROCESSING";
+    }
 }

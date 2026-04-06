@@ -1,11 +1,12 @@
 package app.services.visuals;
 
 import app.common.PipelineException;
-import app.common.PipelineStage;
 import app.model.EncodingProfile;
 import app.model.VisualsContext;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.util.List;
 
 /**
  * Analyzes the source video using ffprobe to derive a dynamic encoding profile.
@@ -17,7 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * entropy filter, but that requires decoding every frame which is
  * slow for large files.
  */
-public class SceneComplexityService implements PipelineStage<VisualsContext, EncodingProfile> {
+public class SceneComplexityService extends SubprocessStage<EncodingProfile> {
 
     @Override
     public EncodingProfile process(VisualsContext input) throws PipelineException {
@@ -32,22 +33,12 @@ public class SceneComplexityService implements PipelineStage<VisualsContext, Enc
     }
 
     private String runFfprobe(String sourceFile) throws Exception {
-        ProcessBuilder pb = new ProcessBuilder(
+        return runProcess(List.of(
                 "ffprobe", "-v", "quiet",
                 "-print_format", "json",
                 "-show_streams",
                 sourceFile
-        );
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        String output = new String(process.getInputStream().readAllBytes());
-        int exitCode = process.waitFor();
-
-        if (exitCode != 0) {
-            throw new PipelineException("ffprobe failed with exit code " + exitCode + "\n" + output, "PROCESSING");
-        }
-
-        return output;
+        ));
     }
 
     private JsonNode parseVideoStream(String ffprobeOutput) throws Exception {
@@ -78,5 +69,10 @@ public class SceneComplexityService implements PipelineStage<VisualsContext, Enc
         if (bpp < 0.05) return new EncodingProfile(1_000_000, 28);
         if (bpp < 0.10) return new EncodingProfile(2_000_000, 23);
         return new EncodingProfile(4_000_000, 18);
+    }
+
+    @Override
+    protected String getStageName() {
+        return "PROCESSING";
     }
 }
