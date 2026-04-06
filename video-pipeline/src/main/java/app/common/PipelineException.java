@@ -8,6 +8,11 @@ public class PipelineException extends Exception {
         this.stageName = stageName;
     }
 
+    public PipelineException(String message, String stageName) {
+        super(message);
+        this.stageName = stageName;
+    }
+
     public String getStageName() {
         return stageName;
     }
