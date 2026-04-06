@@ -1,6 +1,7 @@
 package app.services.visuals;
 
 import app.common.PipelineException;
+import app.common.SubprocessStage;
 import app.model.TranscodedVideo;
 import app.model.VisualsContext;
 
@@ -18,7 +19,7 @@ import java.util.List;
  *
  * Future optimization: run 3 codec groups in parallel via CompletableFuture.
  */
-public class TranscoderService extends SubprocessStage<List<TranscodedVideo>> {
+public class TranscoderService extends SubprocessStage<VisualsContext, List<TranscodedVideo>> {
 
     private static final String[][] CODECS = {
             {"libx264", "h264", "mp4"},

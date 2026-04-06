@@ -1,12 +1,8 @@
-package app.services.visuals;
-
-import app.common.PipelineException;
-import app.common.PipelineStage;
-import app.model.VisualsContext;
+package app.common;
 
 import java.util.List;
 
-public abstract class SubprocessStage<O> implements PipelineStage<VisualsContext, O> {
+public abstract class SubprocessStage<I, O> implements PipelineStage<I, O> {
 
     protected String runProcess(List<String> command) throws Exception {
         ProcessBuilder pb = new ProcessBuilder(command);

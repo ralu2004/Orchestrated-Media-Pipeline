@@ -1,6 +1,7 @@
 package app.services.visuals;
 
 import app.common.PipelineException;
+import app.common.SubprocessStage;
 import app.model.VisualsContext;
 
 import java.nio.file.Files;
@@ -13,7 +14,7 @@ import java.util.List;
  * Captures one frame every 10 seconds, scales each to 160x90,
  * and tiles them into a single sprite_map.jpg used for scrubbing preview.
  */
-public class SpriteGeneratorService extends SubprocessStage<String> {
+public class SpriteGeneratorService extends SubprocessStage<VisualsContext, String> {
 
     @Override
     public String process(VisualsContext input) throws PipelineException {

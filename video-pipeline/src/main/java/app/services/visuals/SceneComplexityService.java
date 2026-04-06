@@ -1,6 +1,7 @@
 package app.services.visuals;
 
 import app.common.PipelineException;
+import app.common.SubprocessStage;
 import app.model.EncodingProfile;
 import app.model.VisualsContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -18,7 +19,7 @@ import java.util.List;
  * entropy filter, but that requires decoding every frame which is
  * slow for large files.
  */
-public class SceneComplexityService extends SubprocessStage<EncodingProfile> {
+public class SceneComplexityService extends SubprocessStage<VisualsContext, EncodingProfile> {
 
     @Override
     public EncodingProfile process(VisualsContext input) throws PipelineException {
