@@ -11,8 +11,7 @@ import java.security.MessageDigest;
  * Computes the SHA-256 checksum of the source file and validates it
  * against the expected checksum provided in the JobRequest.
  *
- * If checksums don't match, the pipeline is aborted — a corrupted or
- * tampered file should never proceed to processing.
+ * If checksums don't match, the pipeline is aborted.
  */
 public class IntegrityCheckService implements PipelineStage<JobRequest, String> {
 
