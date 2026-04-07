@@ -1,72 +1,39 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.AnalysisContext;
+import app.model.RawAnalysisData;
 import app.model.SceneSegment;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Detects scene boundaries using ffmpeg's scene filter and classifies
- * each segment based on visual complexity and speech presence.
+ * Parses scene boundaries and classifies segments based on visual complexity
+ * and speech presence using precomputed analysis logs.
  *
  * Classification logic:
  *   short gap + no silence  → action
  *   long gap  + silence     → dialogue
  *   long gap  + no silence  → establishing_shot
- *
- * Skips segments falling within intro, outro, or credits.
  */
-public class SceneIndexerService extends SubprocessStage<AnalysisContext, List<SceneSegment>> {
+public class SceneIndexerService implements PipelineStage<RawAnalysisData, List<SceneSegment>> {
 
     private static final double SHORT_GAP_THRESHOLD = 3.0; // seconds
 
     @Override
-    public List<SceneSegment> process(AnalysisContext input) throws PipelineException {
+    public List<SceneSegment> process(RawAnalysisData input) throws PipelineException {
         try {
-            String sourceFile = input.jobRequest().sourceFile();
-            String sceneOutput = runSceneDetect(sourceFile);
-            String silenceOutput = runSilenceDetect(sourceFile);
-            return classifySegments(sceneOutput, silenceOutput, input);
-        } catch (PipelineException e) {
-            throw e;
+            return classifySegments(input.sceneOutput(), input.silenceOutput(), input.durationSeconds());
         } catch (Exception e) {
             throw new PipelineException("Scene indexing failed", "ANALYZING", e);
         }
     }
 
-    @Override
-    protected String getStageName() {
-        return "ANALYZING";
-    }
-
-    private String runSceneDetect(String sourceFile) throws Exception {
-        return runProcess(List.of(
-                "ffmpeg", "-i", sourceFile,
-                "-vf", "select='gt(scene,0.4)',showinfo",
-                "-f", "null", "-"
-        ), true);
-    }
-
-    private String runSilenceDetect(String sourceFile) throws Exception {
-        return runProcess(List.of(
-                "ffmpeg", "-i", sourceFile,
-                "-af", "silencedetect=noise=-30dB:d=0.5",
-                "-f", "null", "-"
-        ), true);
-    }
-
-    private List<SceneSegment> classifySegments(String sceneOutput, String silenceOutput, AnalysisContext input) {
+    private List<SceneSegment> classifySegments(String sceneOutput, String silenceOutput, double duration) {
         List<Double> sceneTimes = parseSceneTimestamps(sceneOutput);
         List<double[]> silenceRanges = parseSilenceRanges(silenceOutput);
-
-        double duration = input.ingestResult().formatInfo().duration();
-        double introEnd = parseSeconds(input.analysisResult().introOutro().introEnd());
-        double outroStart = parseSeconds(input.analysisResult().introOutro().outroStart());
-        double creditsStart = parseSeconds(input.analysisResult().creditsTimestamp());
 
         sceneTimes.add(0, 0.0);
         sceneTimes.add(duration);
@@ -76,10 +43,6 @@ public class SceneIndexerService extends SubprocessStage<AnalysisContext, List<S
         for (int i = 0; i < sceneTimes.size() - 1; i++) {
             double start = sceneTimes.get(i);
             double end = sceneTimes.get(i + 1);
-
-            if (end <= introEnd) continue;
-            if (start >= outroStart) continue;
-            if (start >= creditsStart) continue;
 
             String category = classifySegment(start, end, silenceRanges);
             segments.add(new SceneSegment(
@@ -140,12 +103,5 @@ public class SceneIndexerService extends SubprocessStage<AnalysisContext, List<S
     private double parseDoubleAfter(String line, String marker) {
         String after = line.split(marker)[1].trim().split("[\\s|]")[0];
         return Double.parseDouble(after);
-    }
-
-    private double parseSeconds(String timestamp) {
-        String[] parts = timestamp.split(":");
-        return Integer.parseInt(parts[0]) * 3600
-                + Integer.parseInt(parts[1]) * 60
-                + Integer.parseInt(parts[2]);
     }
 }

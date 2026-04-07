@@ -1,7 +1,8 @@
 package app.services.visuals;
 
+import app.common.FfmpegRunner;
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.model.VisualsContext;
 
 import java.nio.file.Files;
@@ -14,7 +15,13 @@ import java.util.List;
  * Captures one frame every 10 seconds, scales each to 160x90,
  * and tiles them into a single sprite_map.jpg used for scrubbing preview.
  */
-public class SpriteGeneratorService extends SubprocessStage<VisualsContext, String> {
+public class SpriteGeneratorService implements PipelineStage<VisualsContext, String> {
+
+    private final FfmpegRunner runner;
+
+    public SpriteGeneratorService(FfmpegRunner runner) {
+        this.runner = runner;
+    }
 
     @Override
     public String process(VisualsContext input) throws PipelineException {
@@ -31,7 +38,7 @@ public class SpriteGeneratorService extends SubprocessStage<VisualsContext, Stri
     }
 
     private void runFfmpeg(String sourceFile, String outputPath) throws Exception {
-        runProcess(List.of(
+        runner.runCaptureStderr(List.of(
                 "ffmpeg", "-y",
                 "-i", sourceFile,
                 "-vf", "fps=1/10,scale=160:90,tile=10x10",
@@ -43,8 +50,4 @@ public class SpriteGeneratorService extends SubprocessStage<VisualsContext, Stri
         return String.format("output/%s/images/sprite_map.jpg", jobId);
     }
 
-    @Override
-    protected String getStageName() {
-        return "PROCESSING";
-    }
 }

@@ -1,7 +1,8 @@
 package app.services.ingest;
 
+import app.common.FfmpegRunner;
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.model.FormatInfo;
 import app.model.JobRequest;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -16,12 +17,20 @@ import java.util.Set;
  * Extracts the format name from the container and checks it against
  * a set of accepted studio formats.
  */
-public class FormatValidatorService extends SubprocessStage<JobRequest, FormatInfo> {
+public class FormatValidatorService implements PipelineStage<JobRequest, FormatInfo> {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final Set<String> ACCEPTED_FORMATS = Set.of(
             "mov,mp4,m4a,3gp,3g2,mj2",   // mp4/mov
             "matroska,webm"              // mkv/webm
     );
+
+    private final FfmpegRunner runner;
+
+    public FormatValidatorService(FfmpegRunner runner) {
+        this.runner = runner;
+    }
 
     @Override
     public FormatInfo process(JobRequest input) throws PipelineException {
@@ -37,8 +46,8 @@ public class FormatValidatorService extends SubprocessStage<JobRequest, FormatIn
         }
     }
 
-    private String runFfprobe(String sourceFile) throws Exception {
-        return runProcess(List.of(
+    private String runFfprobe(String sourceFile) throws PipelineException {
+        return runner.run(List.of(
             "ffprobe", "-v", "quiet",
             "-print_format", "json",
             "-show_format",
@@ -46,8 +55,7 @@ public class FormatValidatorService extends SubprocessStage<JobRequest, FormatIn
     }
 
     private FormatInfo parseFormatInfo(String ffprobeOutput) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(ffprobeOutput);
+        JsonNode root = MAPPER.readTree(ffprobeOutput);
         JsonNode format = root.path("format");
         String formatName = format.path("format_name").asText();
         double duration = format.path("duration").asDouble();
@@ -60,10 +68,5 @@ public class FormatValidatorService extends SubprocessStage<JobRequest, FormatIn
                     "Unsupported format: " + format + ". Accepted: " + ACCEPTED_FORMATS,
                     "INGESTING");
         }
-    }
-
-    @Override
-    protected String getStageName() {
-        return "INGESTING";
     }
 }

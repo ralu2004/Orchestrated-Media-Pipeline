@@ -1,7 +1,7 @@
 package app.services.analysis;
 
 import app.common.PipelineStage;
+import app.model.AnalysisContext;
 import app.model.AnalysisResult;
-import app.model.JobRequest;
 
-public interface AnalysisService extends PipelineStage<JobRequest, AnalysisResult> {}
+public interface AnalysisService extends PipelineStage<AnalysisContext, AnalysisResult> {}

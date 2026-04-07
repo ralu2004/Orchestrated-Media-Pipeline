@@ -1,7 +1,8 @@
 package app.services.visuals;
 
+import app.common.FfmpegRunner;
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.model.EncodingProfile;
 import app.model.VisualsContext;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -19,7 +20,15 @@ import java.util.List;
  * entropy filter, but that requires decoding every frame which is
  * slow for large files.
  */
-public class SceneComplexityService extends SubprocessStage<VisualsContext, EncodingProfile> {
+public class SceneComplexityService implements PipelineStage<VisualsContext, EncodingProfile> {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private final FfmpegRunner runner;
+
+    public SceneComplexityService(FfmpegRunner runner) {
+        this.runner = runner;
+    }
 
     @Override
     public EncodingProfile process(VisualsContext input) throws PipelineException {
@@ -33,8 +42,8 @@ public class SceneComplexityService extends SubprocessStage<VisualsContext, Enco
         }
     }
 
-    private String runFfprobe(String sourceFile) throws Exception {
-        return runProcess(List.of(
+    private String runFfprobe(String sourceFile) throws PipelineException {
+        return runner.run(List.of(
                 "ffprobe", "-v", "quiet",
                 "-print_format", "json",
                 "-show_streams",
@@ -43,8 +52,7 @@ public class SceneComplexityService extends SubprocessStage<VisualsContext, Enco
     }
 
     private JsonNode parseVideoStream(String ffprobeOutput) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.readTree(ffprobeOutput);
+        JsonNode root = MAPPER.readTree(ffprobeOutput);
         for (JsonNode stream : root.path("streams")) {
             if ("video".equals(stream.path("codec_type").asText())) {
                 return stream;
@@ -70,10 +78,5 @@ public class SceneComplexityService extends SubprocessStage<VisualsContext, Enco
         if (bpp < 0.05) return new EncodingProfile(1_000_000, 28);
         if (bpp < 0.10) return new EncodingProfile(2_000_000, 23);
         return new EncodingProfile(4_000_000, 18);
-    }
-
-    @Override
-    protected String getStageName() {
-        return "PROCESSING";
     }
 }

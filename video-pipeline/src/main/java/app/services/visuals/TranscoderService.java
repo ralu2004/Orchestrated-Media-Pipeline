@@ -1,7 +1,8 @@
 package app.services.visuals;
 
+import app.common.FfmpegRunner;
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.model.TranscodedVideo;
 import app.model.VisualsContext;
 
@@ -19,7 +20,13 @@ import java.util.List;
  *
  * Future optimization: run 3 codec groups in parallel via CompletableFuture.
  */
-public class TranscoderService extends SubprocessStage<VisualsContext, List<TranscodedVideo>> {
+public class TranscoderService implements PipelineStage<VisualsContext, List<TranscodedVideo>> {
+
+    private final FfmpegRunner runner;
+
+    public TranscoderService(FfmpegRunner runner) {
+        this.runner = runner;
+    }
 
     private static final String[][] CODECS = {
             {"libx264", "h264", "mp4"},
@@ -90,9 +97,12 @@ public class TranscoderService extends SubprocessStage<VisualsContext, List<Tran
             command.add("2");
         }
 
+        // limit to 2 threads per ffmpeg process
+        command.add("-threads");
+        command.add("2");
         command.add(outputPath);
 
-        runProcess(command);
+        runner.runCaptureStderr(command);
 
         return new TranscodedVideo(outputPath, codec[1], resolution[0]);
     }
@@ -109,8 +119,4 @@ public class TranscoderService extends SubprocessStage<VisualsContext, List<Tran
         );
     }
 
-    @Override
-    protected String getStageName() {
-        return "PROCESSING";
-    }
 }

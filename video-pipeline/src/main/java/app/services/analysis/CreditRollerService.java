@@ -1,38 +1,19 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.AnalysisContext;
+import app.model.RawAnalysisData;
 
-import java.util.List;
-
-public class CreditRollerService extends SubprocessStage<AnalysisContext, String> {
+public class CreditRollerService implements PipelineStage<RawAnalysisData, String> {
 
     @Override
-    public String process(AnalysisContext input) throws PipelineException {
+    public String process(RawAnalysisData input) throws PipelineException {
         try {
-            String ffmpegOutput = runFfmpeg(input.jobRequest().sourceFile());
-            double duration = input.ingestResult().formatInfo().duration();
-            return parseLastBlackSegment(ffmpegOutput, duration);
-        } catch (PipelineException e) {
-            throw e;
+            return parseLastBlackSegment(input.blackdetectOutput(), input.durationSeconds());
         } catch (Exception e) {
             throw new PipelineException("Credit detection failed", "ANALYZING", e);
         }
-    }
-
-    @Override
-    protected String getStageName() {
-        return "ANALYZING";
-    }
-
-    private String runFfmpeg(String sourceFile) throws Exception {
-        return runProcess(List.of(
-            "ffmpeg", "-i", sourceFile,
-            "-vf", "blackdetect=d=0.1:pix_th=0.10",
-            "-f", "null", "-"
-        ), true);
     }
 
     private String parseLastBlackSegment(String ffmpegOutput, double duration) throws PipelineException {
@@ -45,9 +26,7 @@ public class CreditRollerService extends SubprocessStage<AnalysisContext, String
                 double blackStart = Double.parseDouble(parts[0].trim());
 
                 if (blackStart >= creditsThreshold) {
-                    if (lastTimestamp == null) {
-                        lastTimestamp = TimestampUtils.formatTimestamp(blackStart);
-                    }
+                    lastTimestamp = TimestampUtils.formatTimestamp(blackStart);
                 }
             }
         }

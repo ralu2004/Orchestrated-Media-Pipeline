@@ -1,49 +1,22 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
-import app.common.SubprocessStage;
+import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.AnalysisContext;
 import app.model.IntroOutroTimestamps;
+import app.model.RawAnalysisData;
 
-import java.util.List;
-
-public class IntroOutroDetectorService extends SubprocessStage<AnalysisContext, IntroOutroTimestamps> {
+public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData, IntroOutroTimestamps> {
 
     @Override
-    public IntroOutroTimestamps process(AnalysisContext input) throws PipelineException {
+    public IntroOutroTimestamps process(RawAnalysisData input) throws PipelineException {
         try {
-            String silenceDetect = runSilenceDetect(input.jobRequest().sourceFile());
-            String sceneDetect = runSceneDetect(input.jobRequest().sourceFile());
-            String introEnd = parseIntroEnd(silenceDetect, sceneDetect, input.ingestResult().formatInfo().duration());
-            String outroStart = parseOutroStart(sceneDetect, input.ingestResult().formatInfo().duration());
+            String introEnd = parseIntroEnd(input.silenceOutput(), input.sceneOutput(), input.durationSeconds());
+            String outroStart = parseOutroStart(input.sceneOutput(), input.durationSeconds());
             return new IntroOutroTimestamps(introEnd, outroStart);
-        } catch (PipelineException e) {
-            throw e;
         } catch (Exception e) {
             throw new PipelineException("Intro/Outro detection failed", "ANALYZING", e);
         }
-    }
-
-    @Override
-    protected String getStageName() {
-        return "ANALYZING";
-    }
-
-    private String runSilenceDetect(String sourceFile) throws Exception {
-        return runProcess(List.of(
-                "ffmpeg", "-i", sourceFile,
-                "-af", "silencedetect=noise=-30dB:d=0.5",
-                "-f", "null", "-"
-        ), true);
-    }
-
-    private String runSceneDetect(String sourceFile) throws Exception {
-        return runProcess(List.of(
-                "ffmpeg", "-i", sourceFile,
-                "-vf", "select='gt(scene,0.4)',showinfo",
-                "-f", "null", "-"
-        ), true);
     }
 
     private String parseIntroEnd(String silenceOutput, String sceneOutput, double duration) {
