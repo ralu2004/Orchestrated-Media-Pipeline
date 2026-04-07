@@ -24,7 +24,7 @@ public class CreditRollerService extends SubprocessStage<AnalysisContext, String
 
     @Override
     protected String getStageName() {
-        return "ANALYSIS";
+        return "ANALYZING";
     }
 
     private String runFfmpeg(String sourceFile) throws Exception {

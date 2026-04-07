@@ -1,4 +1,4 @@
 package app.model;
 
-public record AnalysisContext(JobRequest jobRequest, IngestResult ingestResult) {
+public record AnalysisContext(JobRequest jobRequest, IngestResult ingestResult, AnalysisResult analysisResult) {
 }
