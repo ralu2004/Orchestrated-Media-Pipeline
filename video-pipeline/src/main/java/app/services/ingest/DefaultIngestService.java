@@ -1,6 +1,7 @@
 package app.services.ingest;
 
 import app.common.PipelineException;
+import app.model.FormatInfo;
 import app.model.IngestResult;
 import app.model.JobRequest;
 
@@ -17,7 +18,7 @@ public class DefaultIngestService implements IngestService {
     @Override
     public IngestResult process(JobRequest input) throws PipelineException {
         String actualChecksum = integrityCheck.process(input);
-        String fileFormat = formatValidator.process(input);
-        return new IngestResult(true, actualChecksum, fileFormat);
+        FormatInfo format = formatValidator.process(input);
+        return new IngestResult(true, actualChecksum, format);
     }
 }

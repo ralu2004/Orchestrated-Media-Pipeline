@@ -2,6 +2,7 @@ package app.services.ingest;
 
 import app.common.PipelineException;
 import app.common.SubprocessStage;
+import app.model.FormatInfo;
 import app.model.JobRequest;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,7 +16,7 @@ import java.util.Set;
  * Extracts the format name from the container and checks it against
  * a set of accepted studio formats.
  */
-public class FormatValidatorService extends SubprocessStage<JobRequest, String> {
+public class FormatValidatorService extends SubprocessStage<JobRequest, FormatInfo> {
 
     private static final Set<String> ACCEPTED_FORMATS = Set.of(
             "mov,mp4,m4a,3gp,3g2,mj2",   // mp4/mov
@@ -23,11 +24,11 @@ public class FormatValidatorService extends SubprocessStage<JobRequest, String> 
     );
 
     @Override
-    public String process(JobRequest input) throws PipelineException {
+    public FormatInfo process(JobRequest input) throws PipelineException {
         try {
             String ffprobeOutput = runFfprobe(input.sourceFile());
-            String format = parseFormat(ffprobeOutput);
-            validateFormat(format);
+            FormatInfo format = parseFormatInfo(ffprobeOutput);
+            validateFormat(format.fileFormat());
             return format;
         } catch (PipelineException e) {
             throw e;
@@ -44,10 +45,13 @@ public class FormatValidatorService extends SubprocessStage<JobRequest, String> 
             sourceFile));
     }
 
-    private String parseFormat(String ffprobeOutput) throws Exception {
+    private FormatInfo parseFormatInfo(String ffprobeOutput) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.readTree(ffprobeOutput);
-        return root.path("format").path("format_name").asText();
+        JsonNode format = root.path("format");
+        String formatName = format.path("format_name").asText();
+        double duration = format.path("duration").asDouble();
+        return new FormatInfo(formatName, duration);
     }
 
     private void validateFormat(String format) throws PipelineException {
