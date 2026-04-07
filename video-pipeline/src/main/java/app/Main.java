@@ -1,17 +1,85 @@
 package app;
 
-//TIP To <b>Run</b> code, press <shortcut actionId="Run"/> or
-// click the <icon src="AllIcons.Actions.Execute"/> icon in the gutter.
+import app.common.FfmpegRunner;
+import app.model.JobRequest;
+import app.model.JobStatus;
+import app.orchestrator.Orchestrator;
+import app.orchestrator.PipelineJob;
+import app.services.analysis.*;
+import app.services.audio.AudioService;
+import app.services.audio.DefaultAudioService;
+import app.services.compliance.ComplianceService;
+import app.services.compliance.DefaultComplianceService;
+import app.services.ingest.DefaultIngestService;
+import app.services.ingest.FormatValidatorService;
+import app.services.ingest.IngestService;
+import app.services.ingest.IntegrityCheckService;
+import app.services.packaging.DefaultPackagingService;
+import app.services.packaging.PackagingService;
+import app.services.visuals.*;
+
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
 public class Main {
     public static void main(String[] args) {
-        //TIP Press <shortcut actionId="ShowIntentionActions"/> with your caret at the highlighted text
-        // to see how IntelliJ IDEA suggests fixing it.
-        System.out.printf("Hello and welcome!");
+        if (args.length < 2) {
+            System.out.println("Usage: java -jar video-pipeline.jar <jobId> <sourceFile> [expectedChecksum]");
+            return;
+        }
 
-        for (int i = 1; i <= 5; i++) {
-            //TIP Press <shortcut actionId="Debug"/> to start debugging your code. We have set one <icon src="AllIcons.Debugger.Db_set_breakpoint"/> breakpoint
-            // for you, but you can always add more by pressing <shortcut actionId="ToggleLineBreakpoint"/>.
-            System.out.println("i = " + i);
+        String jobId = args[0];
+        String sourceFile = args[1];
+        String expectedChecksum = args.length >= 3 ? args[2] : null;
+
+        JobRequest request = new JobRequest(jobId, sourceFile, expectedChecksum);
+
+        FfmpegRunner ingestRunner = new FfmpegRunner("INGESTING");
+        FfmpegRunner analysisRunner = new FfmpegRunner("ANALYZING");
+        FfmpegRunner processingRunner = new FfmpegRunner("PROCESSING");
+
+        IngestService ingestService = new DefaultIngestService(
+                new IntegrityCheckService(),
+                new FormatValidatorService(ingestRunner));
+
+        AnalysisService analysisService = new DefaultAnalysisService(
+                analysisRunner,
+                new IntroOutroDetectorService(),
+                new CreditRollerService(),
+                new SceneIndexerService());
+
+        VisualsService visualsService = new DefaultVisualsService(
+                new SceneComplexityService(processingRunner),
+                new TranscoderService(processingRunner),
+                new SpriteGeneratorService(processingRunner));
+
+        AudioService audioService = new DefaultAudioService();
+        ComplianceService complianceService = new DefaultComplianceService();
+        PackagingService packagingService = new DefaultPackagingService();
+
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        Orchestrator orchestrator = new Orchestrator(
+                ingestService,
+                analysisService,
+                visualsService,
+                audioService,
+                complianceService,
+                packagingService,
+                executor);
+
+        try {
+            PipelineJob job = orchestrator.run(request);
+
+            System.out.println("Job status: " + job.getStatus());
+            if (job.getStatus() == JobStatus.COMPLETED) {
+                System.out.println("Manifest: " + job.getPackagingResult().manifestPath());
+            } else if (job.getStatus() == JobStatus.FAILED && job.getFailureCause() != null) {
+                System.out.println("Failed at stage: " + job.getFailureCause().getStageName());
+                System.out.println("Reason: " + job.getFailureCause().getMessage());
+            }
+        } finally {
+            executor.shutdown();
         }
     }
 }
