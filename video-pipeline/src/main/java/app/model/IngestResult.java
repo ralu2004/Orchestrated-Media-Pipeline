@@ -1,3 +1,3 @@
 package app.model;
 
-public record IngestResult(boolean passed, String actualChecksum, FormatInfo formatInfo) {}
+public record IngestResult(String actualChecksum, FormatInfo formatInfo) {}

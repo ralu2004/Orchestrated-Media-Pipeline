@@ -40,7 +40,7 @@ public class DefaultAnalysisService implements AnalysisService {
         try {
             RawAnalysisData raw = buildRawAnalysisData(input);
 
-            CompletableFuture<IntroOutroTimestamps> introOutroFuture = CompletableFuture
+            CompletableFuture<IntroOutroDetectorService.IntroOutroTimestamps> introOutroFuture = CompletableFuture
                     .supplyAsync(() -> {
                         try {
                             return introOutroDetector.process(raw);
@@ -60,12 +60,16 @@ public class DefaultAnalysisService implements AnalysisService {
 
             CompletableFuture.allOf(introOutroFuture, creditsFuture).join();
 
-            IntroOutroTimestamps introOutro = introOutroFuture.get();
+            IntroOutroDetectorService.IntroOutroTimestamps introOutro = introOutroFuture.get();
             String creditsTimestamp = creditsFuture.get();
 
             List<SceneSegment> segments = sceneIndexer.process(raw);
 
-            return new AnalysisResult(introOutro, creditsTimestamp, segments);
+            return new AnalysisResult(
+                    introOutro.introEnd(),
+                    introOutro.outroStart(),
+                    creditsTimestamp,
+                    segments);
 
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();

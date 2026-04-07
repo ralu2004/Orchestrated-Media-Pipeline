@@ -19,6 +19,6 @@ public class DefaultIngestService implements IngestService {
     public IngestResult process(JobRequest input) throws PipelineException {
         String actualChecksum = integrityCheck.process(input);
         FormatInfo format = formatValidator.process(input);
-        return new IngestResult(true, actualChecksum, format);
+        return new IngestResult(actualChecksum, format);
     }
 }

@@ -52,7 +52,6 @@ public class PipelineIntegrationTest {
 
         ingestResult = ingest.process(jobRequest);
 
-        assertTrue(ingestResult.passed());
         assertNotNull(ingestResult.formatInfo());
         assertTrue(ingestResult.formatInfo().fileFormat().contains("mp4"));
         assertTrue(ingestResult.formatInfo().duration() > 0);
@@ -68,11 +67,11 @@ public class PipelineIntegrationTest {
         SceneIndexerService scenes = new SceneIndexerService();
         DefaultAnalysisService analysis = new DefaultAnalysisService(runner, introOutro, credits, scenes);
 
-        AnalysisContext ctx = new AnalysisContext(jobRequest, ingestResult, null);
+        AnalysisContext ctx = new AnalysisContext(jobRequest, ingestResult);
         AnalysisResult result = analysis.process(ctx);
 
-        assertNotNull(result.introOutro());
-        assertNotNull(result.introOutro().introEnd());
+        assertNotNull(result.introEnd());
+        assertNotNull(result.outroStart());
         assertNotNull(result.creditsTimestamp());
         assertNotNull(result.segments());
         assertFalse(result.segments().isEmpty());

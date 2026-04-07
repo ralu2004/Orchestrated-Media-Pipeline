@@ -3,10 +3,11 @@ package app.services.analysis;
 import app.common.PipelineException;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.IntroOutroTimestamps;
 import app.model.RawAnalysisData;
 
-public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData, IntroOutroTimestamps> {
+public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData, IntroOutroDetectorService.IntroOutroTimestamps> {
+
+    public record IntroOutroTimestamps(String introEnd, String outroStart) {}
 
     @Override
     public IntroOutroTimestamps process(RawAnalysisData input) throws PipelineException {
