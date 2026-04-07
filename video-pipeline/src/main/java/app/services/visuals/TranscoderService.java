@@ -17,8 +17,6 @@ import java.util.List;
  *
  * Encoding parameters (bitrate, crf) are driven by the EncodingProfile
  * produced by SceneComplexityService.
- *
- * Future optimization: run 3 codec groups in parallel via CompletableFuture.
  */
 public class TranscoderService implements PipelineStage<VisualsContext, List<TranscodedVideo>> {
 
