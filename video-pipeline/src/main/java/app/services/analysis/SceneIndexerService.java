@@ -3,7 +3,6 @@ package app.services.analysis;
 import app.common.PipelineException;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.RawAnalysisData;
 import app.model.SceneSegment;
 
 import java.util.ArrayList;

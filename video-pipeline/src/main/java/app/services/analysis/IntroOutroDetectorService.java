@@ -3,7 +3,6 @@ package app.services.analysis;
 import app.common.PipelineException;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
-import app.model.RawAnalysisData;
 
 public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData, IntroOutroDetectorService.IntroOutroTimestamps> {
 

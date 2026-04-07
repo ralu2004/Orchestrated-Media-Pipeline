@@ -1,4 +1,4 @@
-package app.model;
+package app.services.analysis;
 
 public record RawAnalysisData(
         double durationSeconds,
