@@ -17,8 +17,14 @@ public class DefaultIngestService implements IngestService {
 
     @Override
     public IngestResult process(JobRequest input) throws PipelineException {
-        String actualChecksum = integrityCheck.process(input);
-        FormatInfo format = formatValidator.process(input);
-        return new IngestResult(actualChecksum, format);
+        try {
+            String actualChecksum = integrityCheck.process(input);
+            FormatInfo format = formatValidator.process(input);
+            return new IngestResult(actualChecksum, format);
+        } catch (PipelineException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PipelineException("Ingest phase failed", "INGESTING", e);
+        }
     }
 }
