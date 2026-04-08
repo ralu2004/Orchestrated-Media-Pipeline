@@ -6,8 +6,7 @@ import app.model.JobStatus;
 import app.orchestrator.Orchestrator;
 import app.orchestrator.PipelineJob;
 import app.services.analysis.*;
-import app.services.audio.AudioService;
-import app.services.audio.DefaultAudioService;
+import app.services.audio.*;
 import app.services.compliance.ComplianceService;
 import app.services.compliance.DefaultComplianceService;
 import app.services.ingest.DefaultIngestService;
@@ -53,7 +52,10 @@ public class Main {
                 new TranscoderService(processingRunner),
                 new SpriteGeneratorService(processingRunner));
 
-        AudioService audioService = new DefaultAudioService();
+        AudioService audioService = new DefaultAudioService(
+                new SpeechToTextService(processingRunner),
+                new TranslationService(),
+                new AiDubberService());
         ComplianceService complianceService = new DefaultComplianceService();
         PackagingService packagingService = new DefaultPackagingService();
 

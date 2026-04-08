@@ -4,35 +4,30 @@ import app.common.PipelineException;
 import app.model.AudioContext;
 import app.model.AudioResult;
 
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.Map;
 
 public class DefaultAudioService implements AudioService {
 
-    public DefaultAudioService() {
+    private final SpeechToTextService speechToTextService;
+    private final TranslationService translationService;
+    private final AiDubberService aiDubberService;
+
+    public DefaultAudioService(SpeechToTextService speechToTextService,
+                               TranslationService translationService,
+                               AiDubberService aiDubberService) {
+        this.speechToTextService = speechToTextService;
+        this.translationService = translationService;
+        this.aiDubberService = aiDubberService;
     }
 
     @Override
     public AudioResult process(AudioContext input) throws PipelineException {
         try {
-            String jobId = input.jobRequest().jobId();
+            String transcriptPath = speechToTextService.process(input);
+            Map<String, String> translations = translationService.process(transcriptPath);
+            Map<String, String> syntheticAudio = aiDubberService.process(translations);
 
-            Path transcriptPath = Path.of("output", jobId, "text", "source_transcript.txt");
-            Path roTranslationPath = Path.of("output", jobId, "text", "ro_translation.txt");
-            Path roDubPath = Path.of("output", jobId, "audio", "ro_dub_synthetic.aac");
-
-            Files.createDirectories(transcriptPath.getParent());
-            Files.createDirectories(roDubPath.getParent());
-
-            Files.writeString(transcriptPath, "stub transcript");
-            Files.writeString(roTranslationPath, "stub romanian translation");
-            Files.writeString(roDubPath, "stub synthetic audio");
-
-            return new AudioResult(
-                    transcriptPath.toString(),
-                    Map.of("ro", roTranslationPath.toString()),
-                    Map.of("ro", roDubPath.toString()));
+            return new AudioResult(transcriptPath, translations, syntheticAudio);
         } catch (Exception e) {
             throw new PipelineException("Audio processing failed", "AUDIO", e);
         }
