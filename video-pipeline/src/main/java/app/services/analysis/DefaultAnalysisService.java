@@ -2,11 +2,10 @@ package app.services.analysis;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineJson;
 import app.model.*;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,19 +21,18 @@ import java.util.concurrent.*;
  */
 public class DefaultAnalysisService implements AnalysisService {
 
-    private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(2);
-    private static final ObjectMapper SCENE_ANALYSIS_JSON = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT);
-
+    private final ExecutorService parallel;
     private final FfmpegRunner runner;
     private final IntroOutroDetectorService introOutroDetector;
     private final CreditRollerService creditRoller;
     private final SceneIndexerService sceneIndexer;
 
-    public DefaultAnalysisService(FfmpegRunner runner,
+    public DefaultAnalysisService(ExecutorService parallel,
+                                  FfmpegRunner runner,
                                   IntroOutroDetectorService introOutroDetector,
                                   CreditRollerService creditRoller,
                                   SceneIndexerService sceneIndexer) {
+        this.parallel = parallel;
         this.runner = runner;
         this.introOutroDetector = introOutroDetector;
         this.creditRoller = creditRoller;
@@ -53,7 +51,7 @@ public class DefaultAnalysisService implements AnalysisService {
                         } catch (PipelineException e) {
                             throw new RuntimeException(e);
                         }
-                    }, EXECUTOR);
+                    }, parallel);
 
             CompletableFuture<String> creditsFuture = CompletableFuture
                     .supplyAsync(() -> {
@@ -62,7 +60,7 @@ public class DefaultAnalysisService implements AnalysisService {
                         } catch (PipelineException e) {
                             throw new RuntimeException(e);
                         }
-                    }, EXECUTOR);
+                    }, parallel);
 
             CompletableFuture.allOf(introOutroFuture, creditsFuture).join();
 
@@ -83,34 +81,33 @@ public class DefaultAnalysisService implements AnalysisService {
 
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
-            if (cause instanceof PipelineException pe) throw pe;
+            if (cause instanceof RuntimeException re && re.getCause() instanceof PipelineException pe) {
+                throw pe;
+            }
             throw new PipelineException("Analysis phase failed", "ANALYZING", e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new PipelineException("Analysis phase interrupted", "ANALYZING", e);
         } catch (PipelineException e) {
             throw e;
-        } catch (Exception e) {
-            throw new PipelineException("Analysis phase failed", "ANALYZING", e);
         }
     }
 
     private void writeSceneAnalysisJson(String jobId, AnalysisResult result) throws PipelineException {
+        Path path = Path.of("output", jobId, "metadata", "scene_analysis.json");
+
+        Map<String, Object> doc = new LinkedHashMap<>();
+        doc.put("schemaVersion", 1);
+        doc.put("jobId", jobId);
+        doc.put("source", "ffmpeg/ffprobe scene classifiers");
+        doc.put("introEnd", result.introEnd());
+        doc.put("outroStart", result.outroStart());
+        doc.put("creditsTimestamp", result.creditsTimestamp());
+        doc.put("segments", segmentsToMaps(result.segments()));
+
         try {
-            Path path = Path.of("output", jobId, "metadata", "scene_analysis.json");
-            Files.createDirectories(path.getParent());
-
-            Map<String, Object> doc = new LinkedHashMap<>();
-            doc.put("schemaVersion", 1);
-            doc.put("jobId", jobId);
-            doc.put("source", "ffmpeg/ffprobe scene classifiers");
-            doc.put("introEnd", result.introEnd());
-            doc.put("outroStart", result.outroStart());
-            doc.put("creditsTimestamp", result.creditsTimestamp());
-            doc.put("segments", segmentsToMaps(result.segments()));
-
-            SCENE_ANALYSIS_JSON.writeValue(path.toFile(), doc);
-        } catch (Exception e) {
+            PipelineJson.writeDocument(path, doc);
+        } catch (IOException e) {
             throw new PipelineException("Failed to write scene_analysis.json", "ANALYZING", e);
         }
     }

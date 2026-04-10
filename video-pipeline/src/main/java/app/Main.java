@@ -21,6 +21,7 @@ import app.services.visuals.*;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 
 public class Main {
     public static void main(String[] args) {
@@ -44,7 +45,10 @@ public class Main {
                 new IntegrityCheckService(),
                 new FormatValidatorService(ingestRunner));
 
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
         AnalysisService analysisService = new DefaultAnalysisService(
+                executor,
                 analysisRunner,
                 new IntroOutroDetectorService(),
                 new CreditRollerService(),
@@ -63,8 +67,6 @@ public class Main {
                 new SafetyScannerService(complianceRunner),
                 new RegionalBrandingService(complianceRunner));
         PackagingService packagingService = new DefaultPackagingService();
-
-        ExecutorService executor = Executors.newFixedThreadPool(2);
 
         Orchestrator orchestrator = new Orchestrator(
                 ingestService,
@@ -87,6 +89,14 @@ public class Main {
             }
         } finally {
             executor.shutdown();
+            try {
+                if (!executor.awaitTermination(30, TimeUnit.MINUTES)) {
+                    executor.shutdownNow();
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                executor.shutdownNow();
+            }
         }
     }
 }
