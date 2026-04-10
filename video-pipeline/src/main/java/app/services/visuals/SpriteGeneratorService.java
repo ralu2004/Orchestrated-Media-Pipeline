@@ -20,6 +20,8 @@ import java.util.stream.Stream;
 public class SpriteGeneratorService implements PipelineStage<VisualsContext, SpriteGeneratorService.Artifacts> {
 
     private static final int THUMB_INTERVAL_SECONDS = 10;
+    private static final String SPRITE_VIDEO_FILTER = "fps=1/10,scale=160:90,tile=10x10";
+    private static final int THUMB_WIDTH_PX = 320;
 
     private final FfmpegRunner runner;
 
@@ -40,32 +42,32 @@ public class SpriteGeneratorService implements PipelineStage<VisualsContext, Spr
             return new Artifacts(spritePath, thumbnailPaths);
         } catch (PipelineException e) {
             throw e;
-        } catch (Exception e) {
-            throw new PipelineException("Sprite / thumbnail generation failed", "PROCESSING", e);
+        } catch (IOException e) {
+            throw new PipelineException("Sprite / thumbnail I/O failed", "PROCESSING", e);
         }
     }
 
-    private void runSpriteFfmpeg(String sourceFile, String outputPath) throws Exception {
+    private void runSpriteFfmpeg(String sourceFile, String outputPath) throws PipelineException {
         runner.runCaptureStderr(List.of(
                 "ffmpeg", "-y",
                 "-i", sourceFile,
-                "-vf", "fps=1/10,scale=160:90,tile=10x10",
+                "-vf", SPRITE_VIDEO_FILTER,
                 outputPath
         ));
     }
 
-    private List<String> generateThumbnails(VisualsContext input) throws Exception {
+    private List<String> generateThumbnails(VisualsContext input) throws IOException, PipelineException {
         String jobId = input.jobRequest().jobId();
         Path dir = Path.of(String.format("output/%s/images/thumbnails", jobId));
         Files.createDirectories(dir);
 
         String pattern = dir.resolve("thumb_%04d.jpg").toString().replace('\\', '/');
-        String fps = "fps=1/" + THUMB_INTERVAL_SECONDS;
+        String thumbFilter = "fps=1/" + THUMB_INTERVAL_SECONDS + ",scale=" + THUMB_WIDTH_PX + ":-1";
 
         runner.runCaptureStderr(List.of(
                 "ffmpeg", "-y",
                 "-i", input.jobRequest().sourceFile(),
-                "-vf", fps + ",scale=320:-1",
+                "-vf", thumbFilter,
                 pattern));
 
         try (Stream<Path> list = Files.list(dir)) {
@@ -74,8 +76,6 @@ public class SpriteGeneratorService implements PipelineStage<VisualsContext, Spr
                     .sorted()
                     .forEach(p -> paths.add(p.toString().replace('\\', '/')));
             return Collections.unmodifiableList(paths);
-        } catch (IOException e) {
-            throw new PipelineException("Failed to list thumbnails", "PROCESSING", e);
         }
     }
 
