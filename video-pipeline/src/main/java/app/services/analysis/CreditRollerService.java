@@ -4,6 +4,11 @@ import app.common.PipelineException;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
 
+/**
+ * Estimates credits start from blackdetect output in the tail of the timeline.
+ *
+ * Parser over {@link RawAnalysisData}; does not run ffmpeg itself.
+ */
 public class CreditRollerService implements PipelineStage<RawAnalysisData, String> {
 
     @Override

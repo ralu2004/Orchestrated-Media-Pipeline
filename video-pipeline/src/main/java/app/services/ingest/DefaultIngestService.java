@@ -5,6 +5,11 @@ import app.model.FormatInfo;
 import app.model.IngestResult;
 import app.model.JobRequest;
 
+/**
+ * Runs integrity checksum validation, then ffprobe-based format validation.
+ *
+ * Produces {@link IngestResult} with actual checksum and {@link FormatInfo}.
+ */
 public class DefaultIngestService implements IngestService {
 
     private final IntegrityCheckService integrityCheck;

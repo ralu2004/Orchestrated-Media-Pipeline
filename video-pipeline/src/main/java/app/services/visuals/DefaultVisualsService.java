@@ -5,6 +5,11 @@ import app.model.*;
 
 import java.util.List;
 
+/**
+ * Orchestrates scene complexity, transcoding, and sprite generation.
+ *
+ * Each substage writes its own outputs; this class threads {@link VisualsContext} through the chain.
+ */
 public class DefaultVisualsService implements VisualsService{
 
     private final SceneComplexityService sceneComplexityService;

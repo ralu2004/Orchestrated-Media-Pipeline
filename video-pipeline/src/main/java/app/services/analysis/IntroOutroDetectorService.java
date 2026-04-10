@@ -4,6 +4,11 @@ import app.common.PipelineException;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
 
+/**
+ * Derives intro end and outro start timestamps from silencedetect and scenedetect logs.
+ *
+ * Parser over {@link RawAnalysisData}; does not run ffmpeg itself.
+ */
 public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData, IntroOutroDetectorService.IntroOutroTimestamps> {
 
     public record IntroOutroTimestamps(String introEnd, String outroStart) {}
