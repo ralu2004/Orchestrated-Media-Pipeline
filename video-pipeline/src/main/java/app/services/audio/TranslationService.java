@@ -6,6 +6,11 @@ import app.common.PipelineStage;
 import java.nio.file.Path;
 import java.util.Map;
 
+/**
+ * Translates the source transcript into target languages using {@code scripts/translate.py}.
+ *
+ * Input is the absolute path to {@code source_transcript.txt}; output paths are returned per language.
+ */
 public class TranslationService implements PipelineStage<String, Map<String, String>> {
 
 
@@ -31,13 +36,7 @@ public class TranslationService implements PipelineStage<String, Map<String, Str
         }
 
         String scriptPath = Path.of("scripts", "translate.py").toString();
-        ProcessBuilder pb = new ProcessBuilder(
-                pythonBin,
-                scriptPath,
-                transcriptPath,
-                outputPath,
-                "ro"
-        );
+        ProcessBuilder pb = new ProcessBuilder(pythonBin, scriptPath, transcriptPath, outputPath, "ro");
         pb.redirectErrorStream(true);
 
         try {

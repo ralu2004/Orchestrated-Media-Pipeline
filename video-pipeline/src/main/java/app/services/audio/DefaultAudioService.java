@@ -6,6 +6,11 @@ import app.model.AudioResult;
 
 import java.util.Map;
 
+/**
+ * Orchestrates the audio pipeline: speech-to-text, translation, AI dubbing.
+ *
+ * Delegates file generation to substages; aggregates paths into {@link AudioResult}.
+ */
 public class DefaultAudioService implements AudioService {
 
     private final SpeechToTextService speechToTextService;

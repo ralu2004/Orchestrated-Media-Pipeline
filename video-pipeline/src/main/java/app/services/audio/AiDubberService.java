@@ -6,6 +6,11 @@ import app.common.PipelineStage;
 import java.nio.file.Path;
 import java.util.Map;
 
+/**
+ * Generates synthetic localized audio from translation files using {@code scripts/dub.py}.
+ *
+ * Input maps language codes to translation file paths; output maps codes to generated audio paths.
+ */
 public class AiDubberService implements PipelineStage<Map<String, String>, Map<String, String>> {
 
     @Override
