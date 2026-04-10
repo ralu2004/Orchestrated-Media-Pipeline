@@ -9,6 +9,8 @@ import app.services.analysis.*;
 import app.services.audio.*;
 import app.services.compliance.ComplianceService;
 import app.services.compliance.DefaultComplianceService;
+import app.services.compliance.RegionalBrandingService;
+import app.services.compliance.SafetyScannerService;
 import app.services.ingest.DefaultIngestService;
 import app.services.ingest.FormatValidatorService;
 import app.services.ingest.IngestService;
@@ -36,6 +38,7 @@ public class Main {
         FfmpegRunner ingestRunner = new FfmpegRunner("INGESTING");
         FfmpegRunner analysisRunner = new FfmpegRunner("ANALYZING");
         FfmpegRunner processingRunner = new FfmpegRunner("PROCESSING");
+        FfmpegRunner complianceRunner = new FfmpegRunner("COMPLIANCE");
 
         IngestService ingestService = new DefaultIngestService(
                 new IntegrityCheckService(),
@@ -56,7 +59,9 @@ public class Main {
                 new SpeechToTextService(processingRunner),
                 new TranslationService(),
                 new AiDubberService());
-        ComplianceService complianceService = new DefaultComplianceService();
+        ComplianceService complianceService = new DefaultComplianceService(
+                new SafetyScannerService(complianceRunner),
+                new RegionalBrandingService(complianceRunner));
         PackagingService packagingService = new DefaultPackagingService();
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
