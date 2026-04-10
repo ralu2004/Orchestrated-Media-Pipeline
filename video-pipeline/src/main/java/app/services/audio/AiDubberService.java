@@ -3,7 +3,6 @@ package app.services.audio;
 import app.common.PipelineException;
 import app.common.PipelineStage;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
 
@@ -21,14 +20,37 @@ public class AiDubberService implements PipelineStage<Map<String, String>, Map<S
             Path jobRoot = roTranslationPath.getParent().getParent();
             Path roDubPath = jobRoot.resolve("audio").resolve("ro_dub_synthetic.aac");
 
-            Files.createDirectories(roDubPath.getParent());
-            Files.writeString(roDubPath, "stub synthetic audio");
+            runPythonDub(roTranslationPath.toString(), roDubPath.toString(), "ro");
 
             return Map.of("ro", roDubPath.toString());
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
             throw new PipelineException("AI dubbing failed", "PROCESSING", e);
+        }
+    }
+
+    private void runPythonDub(String translationPath, String outputAudioPath, String language) throws PipelineException {
+        String pythonBin = System.getenv("PYTHON_BIN");
+        if (pythonBin == null || pythonBin.isBlank()) {
+            pythonBin = "python";
+        }
+
+        String scriptPath = Path.of("scripts", "dub.py").toString();
+        ProcessBuilder pb = new ProcessBuilder(pythonBin, scriptPath, translationPath, outputAudioPath, language);
+        pb.redirectErrorStream(true);
+
+        try {
+            Process process = pb.start();
+            String output = new String(process.getInputStream().readAllBytes());
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                throw new PipelineException("Python dubbing failed: " + output, "PROCESSING");
+            }
+        } catch (PipelineException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new PipelineException("Python dubbing failed", "PROCESSING", e);
         }
     }
 }
