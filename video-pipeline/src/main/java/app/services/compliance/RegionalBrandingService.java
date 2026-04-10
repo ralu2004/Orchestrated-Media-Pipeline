@@ -38,7 +38,7 @@ public class RegionalBrandingService {
             for (TranscodedVideo v : videos) {
                 String outPath = buildBrandedPath(jobId, v);
                 Files.createDirectories(Path.of(outPath).getParent());
-                overlayLogo(v.path(), logoPath.toString(), outPath, v.codec());
+                overlayLogo(v.path(), ffmpegPath(logoPath), outPath, v.codec());
                 branded.add(new TranscodedVideo(outPath, v.codec(), v.resolution()));
             }
             return branded;
@@ -59,7 +59,7 @@ public class RegionalBrandingService {
                 "ffmpeg", "-y",
                 "-f", "lavfi", "-i", "color=c=0xE50914@0.92:s=320x88:d=1",
                 "-frames:v", "1",
-                logoPath.toString()));
+                ffmpegPath(logoPath)));
     }
 
     private String buildBrandedPath(String jobId, TranscodedVideo v) {
@@ -73,27 +73,46 @@ public class RegionalBrandingService {
 
     private void overlayLogo(String inputVideo, String logoPng, String outputVideo, String codec)
             throws PipelineException {
-        String filter = "[1:v]format=rgba,scale=w=280:h=-1[lg];[0:v][lg]overlay=x=W-w-24:y=24:format=auto[vout]";
+        String filter = "[1:v]format=rgba,scale=w=280:h=-1[lg];[0:v][lg]overlay=x=W-w-24:y=24[vout]";
 
         List<String> cmd = new ArrayList<>();
         cmd.add("ffmpeg");
         cmd.add("-y");
         cmd.add("-i");
-        cmd.add(inputVideo);
+        cmd.add(ffmpegPath(inputVideo));
         cmd.add("-i");
         cmd.add(logoPng);
         cmd.add("-filter_complex");
         cmd.add(filter);
         cmd.add("-map");
         cmd.add("[vout]");
-        cmd.add("-map");
-        cmd.add("0:a?");
-        cmd.add("-c:a");
-        cmd.add("copy");
+        appendAudioOptions(cmd, outputVideo);
         appendVideoEncoder(cmd, codec);
-        cmd.add(outputVideo);
+        if ("vp9".equals(codec) || "hevc".equals(codec)) {
+            cmd.addAll(List.of("-pix_fmt", "yuv420p"));
+        }
+        cmd.add(ffmpegPath(outputVideo));
 
         runner.runCaptureStderr(cmd);
+    }
+
+    private static String ffmpegPath(String path) {
+        return path.replace('\\', '/');
+    }
+
+    private static String ffmpegPath(Path path) {
+        return path.toString().replace('\\', '/');
+    }
+
+    private static void appendAudioOptions(List<String> cmd, String outputVideo) {
+        cmd.add("-map");
+        cmd.add("0:a?");
+        String out = outputVideo.toLowerCase();
+        if (out.endsWith(".webm")) {
+            cmd.addAll(List.of("-c:a", "libopus", "-b:a", "128k"));
+        } else {
+            cmd.addAll(List.of("-c:a", "copy"));
+        }
     }
 
     private void appendVideoEncoder(List<String> cmd, String codec) {
