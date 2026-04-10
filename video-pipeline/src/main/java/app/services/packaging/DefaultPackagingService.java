@@ -1,56 +1,49 @@
 package app.services.packaging;
 
 import app.common.PipelineException;
+import app.common.PipelineJson;
 import app.model.PackagingContext;
 import app.model.PackagingResult;
 import app.model.TranscodedVideo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
-import java.nio.file.Files;
+import java.io.IOException;
 import java.nio.file.Path;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
 public class DefaultPackagingService implements PackagingService {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper()
-            .enable(SerializationFeature.INDENT_OUTPUT);
-
     public DefaultPackagingService() {}
 
     @Override
     public PackagingResult process(PackagingContext input) throws PipelineException {
+        String jobId = input.jobRequest().jobId();
+        Path manifestPath = Path.of("output", jobId, "metadata", "manifest.json");
+
+        List<TranscodedVideo> deliveryVideos = input.complianceResult().processedVideos();
+
+        Map<String, Object> manifest = new LinkedHashMap<>();
+        manifest.put("jobId", jobId);
+        manifest.put("sourceFile", input.jobRequest().sourceFile());
+        manifest.put("transcriptPath", input.audioResult().transcriptPath());
+        manifest.put("translations", input.audioResult().translations());
+        manifest.put("syntheticAudio", input.audioResult().syntheticAudio());
+        manifest.put("transcodedVideos", deliveryVideos.stream().map(this::videoToMap).toList());
+        manifest.put("complianceFlags", input.complianceResult().flags());
+        manifest.put("spriteMapPath", input.visualsResult().spriteMapPath());
+        manifest.put("sceneAnalysisPath", Path.of("output", jobId, "metadata", "scene_analysis.json").toString().replace('\\', '/'));
+        manifest.put("thumbnails", input.visualsResult().thumbnailPaths());
+
         try {
-            String jobId = input.jobRequest().jobId();
-            Path manifestPath = Path.of("output", jobId, "metadata", "manifest.json");
-            Files.createDirectories(manifestPath.getParent());
-
-            Map<String, Object> manifest = new HashMap<>();
-            manifest.put("jobId", jobId);
-            manifest.put("sourceFile", input.jobRequest().sourceFile());
-            manifest.put("transcriptPath", input.audioResult().transcriptPath());
-            manifest.put("translations", input.audioResult().translations());
-            manifest.put("syntheticAudio", input.audioResult().syntheticAudio());
-            manifest.put("transcodedVideos", input.visualsResult().transcodedVideos().stream()
-                    .map(this::videoToMap)
-                    .toList());
-            manifest.put("complianceFlags", input.complianceResult().flags());
-            manifest.put("spriteMapPath", input.visualsResult().spriteMapPath());
-            manifest.put("sceneAnalysisPath", Path.of("output", jobId, "metadata", "scene_analysis.json").toString().replace('\\', '/'));
-            manifest.put("thumbnails", input.visualsResult().thumbnailPaths());
-
-            MAPPER.writerWithDefaultPrettyPrinter().writeValue(manifestPath.toFile(), manifest);
-
-            List<String> encryptedAssets = input.visualsResult().transcodedVideos().stream()
-                    .map(v -> v.path() + ".drm")
-                    .toList();
-
-            return new PackagingResult(manifestPath.toString(), encryptedAssets);
-        } catch (Exception e) {
+            PipelineJson.writeDocument(manifestPath, manifest);
+        } catch (IOException e) {
             throw new PipelineException("Packaging failed", "PACKAGING", e);
         }
+
+        List<String> encryptedAssets = deliveryVideos.stream().map(v -> v.path() + ".drm").toList();
+
+        return new PackagingResult(manifestPath.toString(), encryptedAssets);
     }
 
     private Map<String, String> videoToMap(TranscodedVideo v) {
