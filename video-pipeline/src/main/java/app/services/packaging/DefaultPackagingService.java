@@ -38,6 +38,8 @@ public class DefaultPackagingService implements PackagingService {
                     .toList());
             manifest.put("complianceFlags", input.complianceResult().flags());
             manifest.put("spriteMapPath", input.visualsResult().spriteMapPath());
+            manifest.put("sceneAnalysisPath", Path.of("output", jobId, "metadata", "scene_analysis.json").toString().replace('\\', '/'));
+            manifest.put("thumbnails", input.visualsResult().thumbnailPaths());
 
             MAPPER.writerWithDefaultPrettyPrinter().writeValue(manifestPath.toFile(), manifest);
 

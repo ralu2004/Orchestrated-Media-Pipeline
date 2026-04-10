@@ -3,22 +3,28 @@ package app.services.analysis;
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
 import app.model.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 
 /**
- * Coordinates the analysis phase by:
- * 1. Pre-computing all ffmpeg filter outputs once (silencedetect, scenedetect, blackdetect)
- * 2. Running IntroOutroDetectorService and CreditRollerService in parallel (pure parsers)
- * 3. Running SceneIndexerService sequentially after both finish (depends on their results)
- *
- * Pre-computation avoids redundant ffmpeg calls across substages.
- * Parallel parsing reduces wall-clock time since parsing is CPU-light.
+ * Coordinates the analysis phase:
+ * 1. Pre-computes all ffmpeg filter outputs once (silencedetect, scenedetect, blackdetect)
+ * 2. Runs IntroOutroDetectorService and CreditRollerService in parallel (pure parsers)
+ * 3. Runs SceneIndexerService sequentially after both finish (depends on their results)
+ * 4. Writes {@code output/{jobId}/metadata/scene_analysis.json}
  */
 public class DefaultAnalysisService implements AnalysisService {
 
     private static final ExecutorService EXECUTOR = Executors.newFixedThreadPool(2);
+    private static final ObjectMapper SCENE_ANALYSIS_JSON = new ObjectMapper()
+            .enable(SerializationFeature.INDENT_OUTPUT);
 
     private final FfmpegRunner runner;
     private final IntroOutroDetectorService introOutroDetector;
@@ -65,11 +71,15 @@ public class DefaultAnalysisService implements AnalysisService {
 
             List<SceneSegment> segments = sceneIndexer.process(raw);
 
-            return new AnalysisResult(
+            AnalysisResult analysisResult = new AnalysisResult(
                     introOutro.introEnd(),
                     introOutro.outroStart(),
                     creditsTimestamp,
                     segments);
+
+            writeSceneAnalysisJson(input.jobRequest().jobId(), analysisResult);
+
+            return analysisResult;
 
         } catch (ExecutionException e) {
             Throwable cause = e.getCause();
@@ -83,6 +93,35 @@ public class DefaultAnalysisService implements AnalysisService {
         } catch (Exception e) {
             throw new PipelineException("Analysis phase failed", "ANALYZING", e);
         }
+    }
+
+    private void writeSceneAnalysisJson(String jobId, AnalysisResult result) throws PipelineException {
+        try {
+            Path path = Path.of("output", jobId, "metadata", "scene_analysis.json");
+            Files.createDirectories(path.getParent());
+
+            Map<String, Object> doc = new LinkedHashMap<>();
+            doc.put("schemaVersion", 1);
+            doc.put("jobId", jobId);
+            doc.put("source", "ffmpeg/ffprobe scene classifiers");
+            doc.put("introEnd", result.introEnd());
+            doc.put("outroStart", result.outroStart());
+            doc.put("creditsTimestamp", result.creditsTimestamp());
+            doc.put("segments", segmentsToMaps(result.segments()));
+
+            SCENE_ANALYSIS_JSON.writeValue(path.toFile(), doc);
+        } catch (Exception e) {
+            throw new PipelineException("Failed to write scene_analysis.json", "ANALYZING", e);
+        }
+    }
+
+    private static List<Map<String, String>> segmentsToMaps(List<SceneSegment> segments) {
+        return segments.stream()
+                .map(s -> Map.of(
+                        "startTime", s.startTime(),
+                        "endTime", s.endTime(),
+                        "category", s.category()))
+                .toList();
     }
 
     private RawAnalysisData buildRawAnalysisData(AnalysisContext context) throws PipelineException {

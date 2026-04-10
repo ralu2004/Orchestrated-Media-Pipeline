@@ -6,7 +6,7 @@ import app.model.*;
 import java.util.List;
 
 /**
- * Orchestrates scene complexity, transcoding, and sprite generation.
+ * Orchestrates scene complexity, transcoding, and image metadata (sprite + thumbnails).
  *
  * Each substage writes its own outputs; this class threads {@link VisualsContext} through the chain.
  */
@@ -16,7 +16,9 @@ public class DefaultVisualsService implements VisualsService{
     private final TranscoderService transcoderService;
     private final SpriteGeneratorService spriteGeneratorService;
 
-    public DefaultVisualsService(SceneComplexityService sceneComplexityService, TranscoderService transcoderService, SpriteGeneratorService spriteGeneratorService) {
+    public DefaultVisualsService(SceneComplexityService sceneComplexityService,
+                                 TranscoderService transcoderService,
+                                 SpriteGeneratorService spriteGeneratorService) {
         this.sceneComplexityService = sceneComplexityService;
         this.transcoderService = transcoderService;
         this.spriteGeneratorService = spriteGeneratorService;
@@ -32,8 +34,8 @@ public class DefaultVisualsService implements VisualsService{
         List<TranscodedVideo> transcodedVideos = transcoderService.process(withProfile);
 
         VisualsContext withVideos = new VisualsContext(input, encodingProfile, transcodedVideos);
-        String spriteMapPath = spriteGeneratorService.process(withVideos);
+        SpriteGeneratorService.Artifacts images = spriteGeneratorService.process(withVideos);
 
-        return new VisualsResult(encodingProfile, transcodedVideos, spriteMapPath);
+        return new VisualsResult(encodingProfile, transcodedVideos, images.spriteMapPath(), images.thumbnailPaths());
     }
 }
