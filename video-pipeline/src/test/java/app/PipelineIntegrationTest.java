@@ -108,6 +108,8 @@ public class PipelineIntegrationTest {
 
     @Test @Order(3)
     void visuals_phase_works() throws Exception {
+        assumeVisualsPipelineTestsEnabled();
+
         FfmpegRunner runner = new FfmpegRunner(PipelineStageName.VISUALS);
         SceneComplexityService complexity = new SceneComplexityService(runner);
         TranscoderService transcoder = new TranscoderService(runner);
@@ -182,6 +184,8 @@ public class PipelineIntegrationTest {
 
     @Test @Order(5)
     void compliance_phase_works() throws Exception {
+        assumeVisualsPipelineTestsEnabled();
+
         if (analysisResult == null) analysis_phase_works();
         if (visualsResult == null) visuals_phase_works();
 
@@ -206,6 +210,8 @@ public class PipelineIntegrationTest {
 
     @Test @Order(6)
     void packaging_phase_works() throws Exception {
+        assumeVisualsPipelineTestsEnabled();
+
         if (analysisResult == null) analysis_phase_works();
         if (visualsResult == null) visuals_phase_works();
         if (audioResult == null) audio_phase_works();
@@ -228,6 +234,16 @@ public class PipelineIntegrationTest {
         for (var v : complianceResult.processedVideos()) {
             assertTrue(manifestContent.contains(v.path().replace('\\', '/')));
         }
+    }
+
+    /**
+     * Heavy ffmpeg transcoding / compliance / packaging integration steps are opt-in so {@code mvn test}
+     * stays fast by default. Pass {@code -Drun.visuals.test=true} to run them.
+     */
+    private static void assumeVisualsPipelineTestsEnabled() {
+        assumeTrue(
+                Boolean.parseBoolean(System.getProperty("run.visuals.test", "false")),
+                "Slow visuals pipeline tests skipped; run with -Drun.visuals.test=true");
     }
 
     private static int countFiles(Path dir) throws IOException {
