@@ -1,24 +1,9 @@
 package app;
 
-import app.common.FfmpegRunner;
-import app.common.PipelineStageName;
 import app.model.JobRequest;
 import app.model.JobStatus;
 import app.orchestrator.Orchestrator;
 import app.orchestrator.PipelineJob;
-import app.services.analysis.*;
-import app.services.audio.*;
-import app.services.compliance.ComplianceService;
-import app.services.compliance.DefaultComplianceService;
-import app.services.compliance.RegionalBrandingService;
-import app.services.compliance.SafetyScannerService;
-import app.services.ingest.DefaultIngestService;
-import app.services.ingest.FormatValidatorService;
-import app.services.ingest.IngestService;
-import app.services.ingest.IntegrityCheckService;
-import app.services.packaging.DefaultPackagingService;
-import app.services.packaging.PackagingService;
-import app.services.visuals.*;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -37,47 +22,8 @@ public class Main {
 
         JobRequest request = new JobRequest(jobId, sourceFile, expectedChecksum);
 
-        FfmpegRunner ingestRunner = new FfmpegRunner(PipelineStageName.INGESTING);
-        FfmpegRunner analysisRunner = new FfmpegRunner(PipelineStageName.ANALYZING);
-        FfmpegRunner visualsRunner = new FfmpegRunner(PipelineStageName.VISUALS);
-        FfmpegRunner audioFfmpegRunner = new FfmpegRunner(PipelineStageName.PROCESSING);
-        FfmpegRunner complianceRunner = new FfmpegRunner(PipelineStageName.COMPLIANCE);
-
-        IngestService ingestService = new DefaultIngestService(
-                new IntegrityCheckService(),
-                new FormatValidatorService(ingestRunner));
-
         ExecutorService executor = Executors.newFixedThreadPool(2);
-
-        AnalysisService analysisService = new DefaultAnalysisService(
-                executor,
-                analysisRunner,
-                new IntroOutroDetectorService(),
-                new CreditRollerService(),
-                new SceneIndexerService());
-
-        VisualsService visualsService = new DefaultVisualsService(
-                new SceneComplexityService(visualsRunner),
-                new TranscoderService(visualsRunner),
-                new SpriteGeneratorService(visualsRunner));
-
-        AudioService audioService = new DefaultAudioService(
-                new SpeechToTextService(audioFfmpegRunner),
-                new TranslationService(),
-                new AiDubberService());
-        ComplianceService complianceService = new DefaultComplianceService(
-                new SafetyScannerService(complianceRunner),
-                new RegionalBrandingService(complianceRunner));
-        PackagingService packagingService = new DefaultPackagingService();
-
-        Orchestrator orchestrator = new Orchestrator(
-                ingestService,
-                analysisService,
-                visualsService,
-                audioService,
-                complianceService,
-                packagingService,
-                executor);
+        Orchestrator orchestrator = PipelineFactory.createOrchestrator(executor);
 
         try {
             PipelineJob job = orchestrator.run(request);
