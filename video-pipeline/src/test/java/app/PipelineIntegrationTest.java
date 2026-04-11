@@ -231,6 +231,11 @@ public class PipelineIntegrationTest {
         assertTrue(manifestContent.contains("thumbnails"));
         assertNotNull(result.encryptedAssets());
         assertEquals(complianceResult.processedVideos().size(), result.encryptedAssets().size());
+        assertTrue(manifestContent.contains("simulatedDrmAssets"));
+        for (String drmPath : result.encryptedAssets()) {
+            assertTrue(Files.exists(Path.of(drmPath)), "Simulated DRM file should exist: " + drmPath);
+            assertTrue(Files.size(Path.of(drmPath)) > 0);
+        }
         for (var v : complianceResult.processedVideos()) {
             assertTrue(manifestContent.contains(v.path().replace('\\', '/')));
         }

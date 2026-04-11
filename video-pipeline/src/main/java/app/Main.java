@@ -32,7 +32,7 @@ public class Main {
             System.out.println("Job status: " + job.getStatus());
             if (job.getStatus() == JobStatus.COMPLETED) {
                 System.out.println("Manifest: " + job.getPackagingResult().manifestPath());
-            } else if (job.getStatus() == JobStatus.FAILED && job.getFailureCause() != null) {
+            } else if (job.getStatus () == JobStatus.FAILED && job.getFailureCause() != null) {
                 System.out.println("Failed at stage: " + job.getFailureCause().getStageName());
                 System.out.println("Reason: " + job.getFailureCause().getMessage());
             }

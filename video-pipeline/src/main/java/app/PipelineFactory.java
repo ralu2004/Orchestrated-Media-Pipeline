@@ -13,6 +13,8 @@ import app.services.ingest.DefaultIngestService;
 import app.services.ingest.FormatValidatorService;
 import app.services.ingest.IntegrityCheckService;
 import app.services.packaging.DefaultPackagingService;
+import app.services.packaging.DrmWrapper;
+import app.services.packaging.ManifestBuilder;
 import app.services.visuals.*;
 
 import java.util.concurrent.ExecutorService;
@@ -30,6 +32,7 @@ public final class PipelineFactory {
         FfmpegRunner visualsRunner = new FfmpegRunner(PipelineStageName.VISUALS);
         FfmpegRunner audioFfmpegRunner = new FfmpegRunner(PipelineStageName.PROCESSING);
         FfmpegRunner complianceRunner = new FfmpegRunner(PipelineStageName.COMPLIANCE);
+        FfmpegRunner packagingRunner = new FfmpegRunner(PipelineStageName.PACKAGING);
 
         return new Orchestrator(
                 new DefaultIngestService(
@@ -52,7 +55,9 @@ public final class PipelineFactory {
                 new DefaultComplianceService(
                         new SafetyScannerService(complianceRunner),
                         new RegionalBrandingService(complianceRunner)),
-                new DefaultPackagingService(),
+                new DefaultPackagingService(
+                        new DrmWrapper(packagingRunner), 
+                        new ManifestBuilder()),
                 executor,
                 reporter);
     }

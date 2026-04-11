@@ -12,7 +12,7 @@ A **video processing pipeline** (simplified Netflix-style workflow).
 - **Visuals** — BPP-derived encoding profile, ffmpeg transcoding into nine renditions (three codecs × three resolutions), sprite map, and thumbnails.
 - **Audio** — Python-backed faster-whisper transcription, deep-translator translation, and gTTS dubbing.
 - **Compliance** — ffprobe-based safety flagging and ffmpeg logo overlay branding.
-- **Packaging** — `manifest.json` plus a stub DRM asset list.
+- **Packaging** — `manifest.json` plus HLS-style packaging: AES-128 segmented output under `output/<jobId>/drm/` (playlists listed in `drmAssets`).
 
 ```mermaid
 flowchart TB
@@ -94,20 +94,37 @@ java -jar target/video-pipeline-1.0-SNAPSHOT.jar movie_101 ../samples/input.mp4
 ```
 
 - **Working directory** — run from `video-pipeline` (or adjust paths); outputs go under **`output/<jobId>/`** relative to the JVM’s current directory.
-- **Manifest paths** — entries are relative to that working directory.
-- **Branding** — after **Compliance**, branded files **replace** the transcoded assets under **`video/`**.
+- **Manifest paths** — entries are written with forward slashes; resolve them relative to that working directory.
+- **Visuals vs compliance** — **Visuals** writes the nine renditions under **`video/<codec>/`**. **Compliance** writes **branded** copies under **`compliance/video/<codec>/`** as **`*_branded.<ext>`** (same layout as `video/`, mirrored filenames with the `_branded` suffix). The originals under **`video/`** are left as transcoded (unbranded) sources.
+- **Packaging** — **`manifest.json`** at the job root; **`drm/`** holds HLS AES-128 output (see tree). **`drmAssets`** in the manifest lists each **`playlist.m3u8`**. The **`transcodedVideos`** array in the manifest reflects **post-compliance** paths (the branded files under **`compliance/video/`**).
 
 Expected layout:
 
 ```text
 output/<jobId>/
-  video/
-    h264/     (3 MP4 renditions)
-    vp9/      (3 WebM renditions)
-    hevc/     (3 MKV renditions)
+  video/                         # nine renditions from Visuals (unbranded)
+    h264/
+      720p_h264.mp4
+      1080p_h264.mp4
+      4k_h264.mp4
+    vp9/
+      (3 × .webm)
+    hevc/
+      (3 × .mkv)
+  compliance/video/              # branded copies from Compliance Phase
+    h264/
+      720p_h264_branded.mp4
+      1080p_h264_branded.mp4
+      4k_h264_branded.mp4
+    vp9/
+      (3 × *_branded.webm)
+    hevc/
+      (3 × *_branded.mkv)
   images/
     sprite_map.jpg
     thumbnails/
+      thumb_0001.jpg
+      …
   text/
     source_transcript.txt
     ro_translation.txt
@@ -115,7 +132,21 @@ output/<jobId>/
     ro_dub_synthetic.aac
   metadata/
     scene_analysis.json
-  manifest.json
+  drm/                           # HLS-style output from Packaging (DrmWrapper)
+    encryption.key               # shared AES-128 key (16 bytes)
+    encryption.keyinfo           # key URL + local key path for ffmpeg
+    h264/
+      playlist.m3u8
+      segment_001.ts
+      segment_002.ts
+      …                          # ~10 s segments, encrypted
+    vp9/
+      playlist.m3u8
+      segment_*.ts
+    hevc/
+      playlist.m3u8
+      segment_*.ts
+  manifest.json                  
 ```
 
 ## Testing
@@ -191,7 +222,7 @@ video-pipeline/src/main/java/app/
     visuals/         (DefaultVisualsService, SceneComplexityService, TranscoderService, SpriteGeneratorService, …)
     audio/           (DefaultAudioService, SpeechToTextService, TranslationService, AiDubberService, …)
     compliance/      (DefaultComplianceService, SafetyScannerService, RegionalBrandingService, …)
-    packaging/       (DefaultPackagingService, …)
+    packaging/       (DefaultPackagingService, DrmWrapper, ManifestBuilder, …)
 
 video-pipeline/scripts/
   transcribe.py
@@ -204,5 +235,5 @@ video-pipeline/scripts/
 - **Safety scanner** — representative timestamps along the timeline, not ML-based detection.
 - **Transcoding** — nine ffmpeg jobs run **sequentially** in visuals; parallelizing would improve throughput on large hosts.
 - **Job lifecycle** — in-memory only for `Orchestrator.run`; no persistent queue or database.
-- **DRM** — stubbed: manifest lists **`.drm`** paths without real encryption.
+- **DRM** — HLS AES-128 segment encryption via ffmpeg; per-codec **`playlist.m3u8`** under **`output/<jobId>/drm/<codec>/`**, shared **`encryption.key`** at the drm root, paths in manifest **`drmAssets`**. Key URL in `encryption.keyinfo` is a placeholder (real systems use a licensed key server).
 - **Translation** — Google Translate via **`deep-translator`**; requires **network** when that phase or test runs.
