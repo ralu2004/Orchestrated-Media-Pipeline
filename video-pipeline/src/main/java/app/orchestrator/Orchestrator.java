@@ -13,6 +13,10 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
+/**
+ * The state machine mediating the workflow. It runs the media pipeline and drives {@link PipelineJob} 
+ * through explicit {@link JobStatus} transitions ({@link Transitions}). 
+ */
 public class Orchestrator {
 
     private final IngestService ingestService;
@@ -43,16 +47,19 @@ public class Orchestrator {
         PipelineJob job = new PipelineJob(request);
 
         try {
-            job.setStatus(JobStatus.INGESTING);
+            // INGESTING
+            job.applyTransition(JobStatus.INGESTING);
             IngestResult ingestResult = ingestService.process(request);
             job.setIngestResult(ingestResult);
 
-            job.setStatus(JobStatus.ANALYZING);
-            AnalysisResult analysisResult = analysisService.process(
-                    new AnalysisContext(request, ingestResult));
+            // ANALYZING
+            job.applyTransition(JobStatus.ANALYZING);
+            AnalysisResult analysisResult = analysisService.process(new AnalysisContext(request, ingestResult));
             job.setAnalysisResult(analysisResult);
 
-            job.setStatus(JobStatus.PROCESSING);
+            // PROCESSING
+            // VISUALS
+            job.applyTransition(JobStatus.PROCESSING);
             CompletableFuture<VisualsResult> visualsFuture = CompletableFuture
                     .supplyAsync(() -> {
                         try {
@@ -61,7 +68,7 @@ public class Orchestrator {
                             throw new RuntimeException(e);
                         }
                     }, executor);
-
+            // AUDIO
             CompletableFuture<AudioResult> audioFuture = CompletableFuture
                     .supplyAsync(() -> {
                         try {
@@ -78,27 +85,37 @@ public class Orchestrator {
             job.setVisualsResult(visualsResult);
             job.setAudioResult(audioResult);
 
-            job.setStatus(JobStatus.COMPLIANCE);
+            // COMPLIANCE
+            job.applyTransition(JobStatus.COMPLIANCE);
             ComplianceResult complianceResult = complianceService.process(
                     new ComplianceContext(request, visualsResult));
             job.setComplianceResult(complianceResult);
 
-            job.setStatus(JobStatus.PACKAGING);
+            // PACKAGING
+            job.applyTransition(JobStatus.PACKAGING);
             PackagingResult packagingResult = packagingService.process(
                     new PackagingContext(request, visualsResult, audioResult, complianceResult));
             job.setPackagingResult(packagingResult);
 
-            job.setStatus(JobStatus.COMPLETED);
+            job.applyTransition(JobStatus.COMPLETED);
 
         } catch (PipelineException e) {
-            job.setStatus(JobStatus.FAILED);
+            safeTransitionToFailed(job);
             job.setFailureCause(e);
         } catch (Exception e) {
-            job.setStatus(JobStatus.FAILED);
+            safeTransitionToFailed(job);
             job.setFailureCause(new PipelineException("Unexpected error", "UNKNOWN", e));
         }
 
         return job;
+    }
+
+    private static void safeTransitionToFailed(PipelineJob job) {
+        try {
+            job.applyTransition(JobStatus.FAILED);
+        } catch (PipelineException ignored) {
+            // already in FAILED or COMPLETED 
+        }
     }
 
     private <T> T getFutureResult(CompletableFuture<T> future) throws PipelineException {

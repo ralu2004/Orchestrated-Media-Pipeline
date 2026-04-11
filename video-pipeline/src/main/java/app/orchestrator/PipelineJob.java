@@ -3,6 +3,15 @@ package app.orchestrator;
 import app.common.PipelineException;
 import app.model.*;
 
+/**
+ * Mutable snapshot of a single pipeline run: current {@link JobStatus}, optional {@link PipelineException}
+ * on failure, and phase outputs as they become available.
+ *
+ * <p>Constructed by {@link Orchestrator} with status {@link JobStatus#PENDING}. Status changes must go
+ * through {@link #applyTransition(JobStatus)} so they stay consistent with {@link Transitions}.
+ * 
+ * Package-private setters below exist only for {@link Orchestrator} to attach phase outputs.
+ */
 public class PipelineJob {
 
     private JobStatus status;
@@ -15,15 +24,21 @@ public class PipelineJob {
     private ComplianceResult complianceResult;
     private PackagingResult packagingResult;
 
+    /** Starts in {@link JobStatus#PENDING}; only {@link Orchestrator} should construct instances. */
     PipelineJob(JobRequest request) {
         this.jobRequest = request;
         this.status = JobStatus.PENDING;
     }
 
+    /** Current lifecycle state of the job. */
     public JobStatus getStatus() {
         return status;
     }
 
+    /**
+     * When {@link #getStatus()} is {@link JobStatus#FAILED}, the error that stopped the pipeline;
+     * otherwise typically {@code null}.
+     */
     public PipelineException getFailureCause() {
         return failureCause;
     }
@@ -56,8 +71,16 @@ public class PipelineJob {
         return packagingResult;
     }
 
-    void setStatus(JobStatus status) {
-        this.status = status;
+    /**
+     * Moves to {@code next} only if {@link Transitions#isAllowed(JobStatus, JobStatus)} permits it;
+     * otherwise throws with stage {@code ORCHESTRATION}.
+     */
+    void applyTransition(JobStatus next) throws PipelineException {
+        if (!Transitions.isAllowed(status, next)) {
+            throw new PipelineException(
+                    "Illegal pipeline transition: " + status + " -> " + next, "ORCHESTRATION");
+        }
+        this.status = next;
     }
 
     void setFailureCause(PipelineException cause) {
