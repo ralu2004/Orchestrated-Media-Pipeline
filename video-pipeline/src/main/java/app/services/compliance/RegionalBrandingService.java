@@ -90,6 +90,9 @@ public class RegionalBrandingService {
         if ("vp9".equals(codec) || "hevc".equals(codec)) {
             cmd.addAll(List.of("-pix_fmt", "yuv420p"));
         }
+        cmd.add("-threads");
+        cmd.add("3");
+
         cmd.add(ffmpegPath(outputVideo));
 
         runner.runCaptureStderr(cmd);

@@ -98,7 +98,7 @@ public class TranscoderService implements PipelineStage<VisualsContext, List<Tra
 
         // limit to 2 threads per ffmpeg process
         command.add("-threads");
-        command.add("2");
+        command.add("3");
         command.add(outputPath);
 
         runner.runCaptureStderr(command);
