@@ -20,7 +20,7 @@ public class DefaultPackagingService implements PackagingService {
     @Override
     public PackagingResult process(PackagingContext input) throws PipelineException {
         String jobId = input.jobRequest().jobId();
-        Path manifestPath = Path.of("output", jobId, "metadata", "manifest.json");
+        Path manifestPath = Path.of("output", jobId, "manifest.json");
 
         List<TranscodedVideo> deliveryVideos = input.complianceResult().processedVideos();
 
