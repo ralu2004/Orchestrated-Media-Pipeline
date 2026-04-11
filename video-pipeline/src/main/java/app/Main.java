@@ -1,6 +1,7 @@
 package app;
 
 import app.common.FfmpegRunner;
+import app.common.PipelineStageName;
 import app.model.JobRequest;
 import app.model.JobStatus;
 import app.orchestrator.Orchestrator;
@@ -36,10 +37,11 @@ public class Main {
 
         JobRequest request = new JobRequest(jobId, sourceFile, expectedChecksum);
 
-        FfmpegRunner ingestRunner = new FfmpegRunner("INGESTING");
-        FfmpegRunner analysisRunner = new FfmpegRunner("ANALYZING");
-        FfmpegRunner processingRunner = new FfmpegRunner("PROCESSING");
-        FfmpegRunner complianceRunner = new FfmpegRunner("COMPLIANCE");
+        FfmpegRunner ingestRunner = new FfmpegRunner(PipelineStageName.INGESTING);
+        FfmpegRunner analysisRunner = new FfmpegRunner(PipelineStageName.ANALYZING);
+        FfmpegRunner visualsRunner = new FfmpegRunner(PipelineStageName.VISUALS);
+        FfmpegRunner audioFfmpegRunner = new FfmpegRunner(PipelineStageName.PROCESSING);
+        FfmpegRunner complianceRunner = new FfmpegRunner(PipelineStageName.COMPLIANCE);
 
         IngestService ingestService = new DefaultIngestService(
                 new IntegrityCheckService(),
@@ -55,12 +57,12 @@ public class Main {
                 new SceneIndexerService());
 
         VisualsService visualsService = new DefaultVisualsService(
-                new SceneComplexityService(processingRunner),
-                new TranscoderService(processingRunner),
-                new SpriteGeneratorService(processingRunner));
+                new SceneComplexityService(visualsRunner),
+                new TranscoderService(visualsRunner),
+                new SpriteGeneratorService(visualsRunner));
 
         AudioService audioService = new DefaultAudioService(
-                new SpeechToTextService(processingRunner),
+                new SpeechToTextService(audioFfmpegRunner),
                 new TranslationService(),
                 new AiDubberService());
         ComplianceService complianceService = new DefaultComplianceService(

@@ -1,6 +1,7 @@
 package app.services.packaging;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineJson;
 import app.model.PackagingContext;
 import app.model.PackagingResult;
@@ -38,7 +39,7 @@ public class DefaultPackagingService implements PackagingService {
         try {
             PipelineJson.writeDocument(manifestPath, manifest);
         } catch (IOException e) {
-            throw new PipelineException("Packaging failed", "PACKAGING", e);
+            throw new PipelineException("Packaging failed", PipelineStageName.PACKAGING, e);
         }
 
         List<String> encryptedAssets = deliveryVideos.stream().map(v -> v.path() + ".drm").toList();

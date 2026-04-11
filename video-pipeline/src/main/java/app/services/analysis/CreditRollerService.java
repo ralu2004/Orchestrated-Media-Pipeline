@@ -1,6 +1,7 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
 
@@ -16,7 +17,7 @@ public class CreditRollerService implements PipelineStage<RawAnalysisData, Strin
         try {
             return parseLastBlackSegment(input.blackdetectOutput(), input.durationSeconds());
         } catch (Exception e) {
-            throw new PipelineException("Credit detection failed", "ANALYZING", e);
+            throw new PipelineException("Credit detection failed", PipelineStageName.ANALYZING, e);
         }
     }
 

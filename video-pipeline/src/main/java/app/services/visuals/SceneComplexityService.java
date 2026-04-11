@@ -2,6 +2,7 @@ package app.services.visuals;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.model.EncodingProfile;
 import app.model.VisualsContext;
@@ -38,7 +39,7 @@ public class SceneComplexityService implements PipelineStage<VisualsContext, Enc
             double bpp = calculateBpp(videoStream);
             return deriveEncodingProfile(bpp);
         } catch (Exception e) {
-            throw new PipelineException("Scene complexity analysis failed", "PROCESSING", e);
+            throw new PipelineException("Scene complexity analysis failed", PipelineStageName.VISUALS, e);
         }
     }
 
@@ -59,7 +60,7 @@ public class SceneComplexityService implements PipelineStage<VisualsContext, Enc
             }
         }
 
-        throw new PipelineException("No video stream found", "PROCESSING");
+        throw new PipelineException("No video stream found", PipelineStageName.VISUALS);
     }
 
     private double calculateBpp(JsonNode videoStream) {

@@ -1,6 +1,7 @@
 package app.services.audio;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 
 import java.nio.file.Path;
@@ -18,7 +19,7 @@ public class AiDubberService implements PipelineStage<Map<String, String>, Map<S
         try {
             String roTranslation = input.get("ro");
             if (roTranslation == null || roTranslation.isBlank()) {
-                throw new PipelineException("Missing Romanian translation path", "PROCESSING");
+                throw new PipelineException("Missing Romanian translation path", PipelineStageName.PROCESSING);
             }
 
             Path roTranslationPath = Path.of(roTranslation);
@@ -31,7 +32,7 @@ public class AiDubberService implements PipelineStage<Map<String, String>, Map<S
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("AI dubbing failed", "PROCESSING", e);
+            throw new PipelineException("AI dubbing failed", PipelineStageName.PROCESSING, e);
         }
     }
 
@@ -50,12 +51,12 @@ public class AiDubberService implements PipelineStage<Map<String, String>, Map<S
             String output = new String(process.getInputStream().readAllBytes());
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                throw new PipelineException("Python dubbing failed: " + output, "PROCESSING");
+                throw new PipelineException("Python dubbing failed: " + output, PipelineStageName.PROCESSING);
             }
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Python dubbing failed", "PROCESSING", e);
+            throw new PipelineException("Python dubbing failed", PipelineStageName.PROCESSING, e);
         }
     }
 }

@@ -1,6 +1,7 @@
 package app.orchestrator;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.model.*;
 import app.services.analysis.AnalysisService;
 import app.services.audio.AudioService;
@@ -104,7 +105,7 @@ public class Orchestrator {
             job.setFailureCause(e);
         } catch (Exception e) {
             safeTransitionToFailed(job);
-            job.setFailureCause(new PipelineException("Unexpected error", "UNKNOWN", e));
+            job.setFailureCause(new PipelineException("Unexpected error", PipelineStageName.UNKNOWN, e));
         }
 
         return job;
@@ -129,10 +130,10 @@ public class Orchestrator {
             if (cause instanceof RuntimeException re && re.getCause() instanceof PipelineException pe) {
                 throw pe;
             }
-            throw new PipelineException("Parallel processing failed", "PROCESSING", e);
+            throw new PipelineException("Parallel processing failed", PipelineStageName.PROCESSING, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new PipelineException("Parallel processing interrupted", "PROCESSING", e);
+            throw new PipelineException("Parallel processing interrupted", PipelineStageName.PROCESSING, e);
         }
     }
 }

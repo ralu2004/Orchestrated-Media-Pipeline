@@ -1,6 +1,7 @@
 package app.services.audio;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.model.AudioContext;
 import app.model.AudioResult;
 
@@ -34,7 +35,7 @@ public class DefaultAudioService implements AudioService {
 
             return new AudioResult(transcriptPath, translations, syntheticAudio);
         } catch (Exception e) {
-            throw new PipelineException("Audio processing failed", "AUDIO", e);
+            throw new PipelineException("Audio processing failed", PipelineStageName.AUDIO, e);
         }
     }
 }

@@ -2,6 +2,7 @@ package app.services.visuals;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.model.TranscodedVideo;
 import app.model.VisualsContext;
@@ -49,7 +50,7 @@ public class TranscoderService implements PipelineStage<VisualsContext, List<Tra
                 }
             }
         } catch (Exception e) {
-            throw new PipelineException("Transcoding failed", "PROCESSING", e);
+            throw new PipelineException("Transcoding failed", PipelineStageName.VISUALS, e);
         }
         return results;
     }

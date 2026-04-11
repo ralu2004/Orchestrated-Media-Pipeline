@@ -1,6 +1,7 @@
 package app.services.audio;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 
 import java.nio.file.Path;
@@ -25,7 +26,7 @@ public class TranslationService implements PipelineStage<String, Map<String, Str
 
             return Map.of("ro", roTranslationPath.toString());
         } catch (Exception e) {
-            throw new PipelineException("Translation failed", "PROCESSING", e);
+            throw new PipelineException("Translation failed", PipelineStageName.PROCESSING, e);
         }
     }
 
@@ -44,12 +45,12 @@ public class TranslationService implements PipelineStage<String, Map<String, Str
             String output = new String(process.getInputStream().readAllBytes());
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                throw new PipelineException("Python translation failed: " + output, "PROCESSING");
+                throw new PipelineException("Python translation failed: " + output, PipelineStageName.PROCESSING);
             }
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Python translation failed", "PROCESSING", e);
+            throw new PipelineException("Python translation failed", PipelineStageName.PROCESSING, e);
         }
     }
 }

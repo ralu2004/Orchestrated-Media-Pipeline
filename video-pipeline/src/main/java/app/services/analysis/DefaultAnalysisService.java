@@ -2,6 +2,7 @@ package app.services.analysis;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineJson;
 import app.model.*;
 
@@ -84,10 +85,10 @@ public class DefaultAnalysisService implements AnalysisService {
             if (cause instanceof RuntimeException re && re.getCause() instanceof PipelineException pe) {
                 throw pe;
             }
-            throw new PipelineException("Analysis phase failed", "ANALYZING", e);
+            throw new PipelineException("Analysis phase failed", PipelineStageName.ANALYZING, e);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new PipelineException("Analysis phase interrupted", "ANALYZING", e);
+            throw new PipelineException("Analysis phase interrupted", PipelineStageName.ANALYZING, e);
         } catch (PipelineException e) {
             throw e;
         }
@@ -108,7 +109,7 @@ public class DefaultAnalysisService implements AnalysisService {
         try {
             PipelineJson.writeDocument(path, doc);
         } catch (IOException e) {
-            throw new PipelineException("Failed to write scene_analysis.json", "ANALYZING", e);
+            throw new PipelineException("Failed to write scene_analysis.json", PipelineStageName.ANALYZING, e);
         }
     }
 

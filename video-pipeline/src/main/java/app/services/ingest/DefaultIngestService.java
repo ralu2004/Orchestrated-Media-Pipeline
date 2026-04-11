@@ -1,6 +1,7 @@
 package app.services.ingest;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.model.FormatInfo;
 import app.model.IngestResult;
 import app.model.JobRequest;
@@ -29,7 +30,7 @@ public class DefaultIngestService implements IngestService {
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Ingest phase failed", "INGESTING", e);
+            throw new PipelineException("Ingest phase failed", PipelineStageName.INGESTING, e);
         }
     }
 }

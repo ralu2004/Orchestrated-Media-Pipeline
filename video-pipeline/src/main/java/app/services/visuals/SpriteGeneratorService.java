@@ -2,6 +2,7 @@ package app.services.visuals;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.model.VisualsContext;
 
@@ -43,7 +44,7 @@ public class SpriteGeneratorService implements PipelineStage<VisualsContext, Spr
         } catch (PipelineException e) {
             throw e;
         } catch (IOException e) {
-            throw new PipelineException("Sprite / thumbnail I/O failed", "PROCESSING", e);
+            throw new PipelineException("Sprite / thumbnail I/O failed", PipelineStageName.VISUALS, e);
         }
     }
 

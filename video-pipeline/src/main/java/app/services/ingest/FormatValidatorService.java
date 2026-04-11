@@ -3,6 +3,7 @@ package app.services.ingest;
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
 import app.common.PipelineStage;
+import app.common.PipelineStageName;
 import app.model.FormatInfo;
 import app.model.JobRequest;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -42,7 +43,7 @@ public class FormatValidatorService implements PipelineStage<JobRequest, FormatI
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Format validation failed", "INGESTING", e);
+            throw new PipelineException("Format validation failed", PipelineStageName.INGESTING, e);
         }
     }
 
@@ -64,9 +65,7 @@ public class FormatValidatorService implements PipelineStage<JobRequest, FormatI
 
     private void validateFormat(String format) throws PipelineException {
         if (!ACCEPTED_FORMATS.contains(format)) {
-            throw new PipelineException(
-                    "Unsupported format: " + format + ". Accepted: " + ACCEPTED_FORMATS,
-                    "INGESTING");
+            throw new PipelineException("Unsupported format: " + format + ". Accepted: " + ACCEPTED_FORMATS, PipelineStageName.INGESTING);
         }
     }
 }

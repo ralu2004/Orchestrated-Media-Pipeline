@@ -1,6 +1,7 @@
 package app.services.audio;
 
 import app.common.FfmpegRunner;
+import app.common.PipelineStageName;
 import app.model.AnalysisResult;
 import app.model.AudioContext;
 import app.model.JobRequest;
@@ -36,7 +37,7 @@ class SpeechToTextServiceTest {
         AnalysisResult analysisResult = new AnalysisResult("00:00:01", "00:00:10", "00:00:09", List.of());
         AudioContext context = new AudioContext(request, analysisResult);
 
-        SpeechToTextService service = new SpeechToTextService(new FfmpegRunner("PROCESSING"));
+        SpeechToTextService service = new SpeechToTextService(new FfmpegRunner(PipelineStageName.PROCESSING));
         String transcriptPath = service.process(context);
         Path transcriptFile = Path.of(transcriptPath);
 

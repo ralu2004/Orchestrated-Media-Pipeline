@@ -2,6 +2,7 @@ package app.services.compliance;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.TimestampUtils;
 import app.model.ComplianceContext;
 import app.model.ContentFlag;
@@ -56,7 +57,7 @@ public class SafetyScannerService {
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Safety scan failed: could not read media duration", "COMPLIANCE", e);
+            throw new PipelineException("Safety scan failed: could not read media duration", PipelineStageName.COMPLIANCE, e);
         }
     }
 }

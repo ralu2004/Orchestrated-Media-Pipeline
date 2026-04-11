@@ -2,6 +2,7 @@ package app.services.audio;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.model.AudioContext;
 
@@ -34,7 +35,7 @@ public class SpeechToTextService implements PipelineStage<AudioContext, String> 
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Speech to text failed", "PROCESSING", e);
+            throw new PipelineException("Speech to text failed", PipelineStageName.PROCESSING, e);
         } finally {
             if (tempAudioPath != null) {
                 try { Files.deleteIfExists(Paths.get(tempAudioPath)); }
@@ -74,12 +75,12 @@ public class SpeechToTextService implements PipelineStage<AudioContext, String> 
             String output = new String(process.getInputStream().readAllBytes());
             int exitCode = process.waitFor();
             if (exitCode != 0) {
-                throw new PipelineException("Python transcription failed: " + output, "PROCESSING");
+                throw new PipelineException("Python transcription failed: " + output, PipelineStageName.PROCESSING);
             }
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Python transcription failed", "PROCESSING", e);
+            throw new PipelineException("Python transcription failed", PipelineStageName.PROCESSING, e);
         }
     }
 }

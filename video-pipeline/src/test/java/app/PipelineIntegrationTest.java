@@ -1,6 +1,7 @@
 package app;
 
 import app.common.FfmpegRunner;
+import app.common.PipelineStageName;
 import app.model.*;
 import app.services.analysis.*;
 import app.services.audio.*;
@@ -62,7 +63,7 @@ public class PipelineIntegrationTest {
 
     @Test @Order(1)
     void ingest_phase_works() throws Exception {
-        FfmpegRunner runner = new FfmpegRunner("INGESTING");
+        FfmpegRunner runner = new FfmpegRunner(PipelineStageName.INGESTING);
         IntegrityCheckService integrity = new IntegrityCheckService();
         FormatValidatorService formatValidator = new FormatValidatorService(runner);
         DefaultIngestService ingest = new DefaultIngestService(integrity, formatValidator);
@@ -78,7 +79,7 @@ public class PipelineIntegrationTest {
     void analysis_phase_works() throws Exception {
         if (ingestResult == null) ingest_phase_works();
 
-        FfmpegRunner runner = new FfmpegRunner("ANALYZING");
+        FfmpegRunner runner = new FfmpegRunner(PipelineStageName.ANALYZING);
         IntroOutroDetectorService introOutro = new IntroOutroDetectorService();
         CreditRollerService credits = new CreditRollerService();
         SceneIndexerService scenes = new SceneIndexerService();
@@ -107,7 +108,7 @@ public class PipelineIntegrationTest {
 
     @Test @Order(3)
     void visuals_phase_works() throws Exception {
-        FfmpegRunner runner = new FfmpegRunner("PROCESSING");
+        FfmpegRunner runner = new FfmpegRunner(PipelineStageName.VISUALS);
         SceneComplexityService complexity = new SceneComplexityService(runner);
         TranscoderService transcoder = new TranscoderService(runner);
         SpriteGeneratorService sprites = new SpriteGeneratorService(runner);
@@ -154,7 +155,7 @@ public class PipelineIntegrationTest {
         assumeTrue(Files.exists(moduleDir.resolve("scripts/dub.py")), "dub.py is missing");
 
         DefaultAudioService audio = new DefaultAudioService(
-                new SpeechToTextService(new FfmpegRunner("PROCESSING")),
+                new SpeechToTextService(new FfmpegRunner(PipelineStageName.PROCESSING)),
                 new TranslationService(),
                 new AiDubberService());
 
@@ -184,7 +185,7 @@ public class PipelineIntegrationTest {
         if (analysisResult == null) analysis_phase_works();
         if (visualsResult == null) visuals_phase_works();
 
-        FfmpegRunner complianceRunner = new FfmpegRunner("COMPLIANCE");
+        FfmpegRunner complianceRunner = new FfmpegRunner(PipelineStageName.COMPLIANCE);
         DefaultComplianceService complianceService = new DefaultComplianceService(
                 new SafetyScannerService(complianceRunner),
                 new RegionalBrandingService(complianceRunner));

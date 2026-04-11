@@ -1,6 +1,7 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
 import app.model.SceneSegment;
@@ -26,7 +27,7 @@ public class SceneIndexerService implements PipelineStage<RawAnalysisData, List<
         try {
             return classifySegments(input.sceneOutput(), input.silenceOutput(), input.durationSeconds());
         } catch (Exception e) {
-            throw new PipelineException("Scene indexing failed", "ANALYZING", e);
+            throw new PipelineException("Scene indexing failed", PipelineStageName.ANALYZING, e);
         }
     }
 

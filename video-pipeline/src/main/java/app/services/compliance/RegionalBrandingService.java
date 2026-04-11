@@ -2,6 +2,7 @@ package app.services.compliance;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.model.ComplianceContext;
 import app.model.TranscodedVideo;
 
@@ -45,7 +46,7 @@ public class RegionalBrandingService {
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Regional branding failed", "COMPLIANCE", e);
+            throw new PipelineException("Regional branding failed", PipelineStageName.COMPLIANCE, e);
         } finally {
             try {
                 Files.deleteIfExists(logoPath);

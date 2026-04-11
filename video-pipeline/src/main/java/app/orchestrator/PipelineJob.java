@@ -1,6 +1,7 @@
 package app.orchestrator;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.model.*;
 
 /**
@@ -77,8 +78,7 @@ public class PipelineJob {
      */
     void applyTransition(JobStatus next) throws PipelineException {
         if (!Transitions.isAllowed(status, next)) {
-            throw new PipelineException(
-                    "Illegal pipeline transition: " + status + " -> " + next, "ORCHESTRATION");
+            throw new PipelineException("Illegal pipeline transition: " + status + " -> " + next, PipelineStageName.ORCHESTRATION);
         }
         this.status = next;
     }

@@ -1,6 +1,7 @@
 package app.services.ingest;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.model.JobRequest;
 
@@ -24,7 +25,7 @@ public class IntegrityCheckService implements PipelineStage<JobRequest, String> 
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Integrity check failed", "INGESTING", e);
+            throw new PipelineException("Integrity check failed", PipelineStageName.INGESTING, e);
         }
     }
 
@@ -43,7 +44,7 @@ public class IntegrityCheckService implements PipelineStage<JobRequest, String> 
     private void validateChecksum(String actual, String expected) throws PipelineException {
         if (expected == null || expected.isBlank()) return; // no checksum provided, skip validation
         if (!actual.equalsIgnoreCase(expected)) {
-            throw new PipelineException("Checksum mismatch — expected: " + expected + ", actual: " + actual, "INGESTING");
+            throw new PipelineException("Checksum mismatch — expected: " + expected + ", actual: " + actual, PipelineStageName.INGESTING);
         }
     }
 

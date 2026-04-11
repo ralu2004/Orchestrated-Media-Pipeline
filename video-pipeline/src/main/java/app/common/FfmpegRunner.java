@@ -24,6 +24,10 @@ public final class FfmpegRunner {
         this.stageName = stageName;
     }
 
+    public FfmpegRunner(PipelineStageName stage) {
+        this(stage.name());
+    }
+
     public String run(List<String> command) throws PipelineException {
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectErrorStream(true);

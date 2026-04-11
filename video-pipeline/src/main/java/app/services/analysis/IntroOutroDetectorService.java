@@ -1,6 +1,7 @@
 package app.services.analysis;
 
 import app.common.PipelineException;
+import app.common.PipelineStageName;
 import app.common.PipelineStage;
 import app.common.TimestampUtils;
 
@@ -20,7 +21,7 @@ public class IntroOutroDetectorService implements PipelineStage<RawAnalysisData,
             String outroStart = parseOutroStart(input.sceneOutput(), input.durationSeconds());
             return new IntroOutroTimestamps(introEnd, outroStart);
         } catch (Exception e) {
-            throw new PipelineException("Intro/Outro detection failed", "ANALYZING", e);
+            throw new PipelineException("Intro/Outro detection failed", PipelineStageName.ANALYZING, e);
         }
     }
 
