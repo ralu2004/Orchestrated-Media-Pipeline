@@ -2,19 +2,16 @@ package app.services.compliance;
 
 import app.common.FfmpegRunner;
 import app.common.PipelineException;
-import app.common.PipelineStageName;
 import app.model.ComplianceContext;
 import app.model.TranscodedVideo;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Applies a branding logo overlay to each transcoded video.
- 
  * Generates a small PNG via ffmpeg lavfi, then overlays it on the top-right of each video.
  */
 public class RegionalBrandingService {
@@ -32,29 +29,22 @@ public class RegionalBrandingService {
             return List.of();
         }
 
-        Path logoPath = Path.of(System.getProperty("java.io.tmpdir"), jobId + "_branding_logo.png");
+        Path logoPath = Path.of(System.getProperty("java.io.tmpdir"), jobId + "_compliance_logo.png");
         try {
             generateLogoPng(logoPath);
 
             List<TranscodedVideo> branded = new ArrayList<>();
             for (TranscodedVideo v : videos) {
-                Path dest = Path.of(v.path()).normalize();
-                Files.createDirectories(dest.getParent());
-                Path tempOut = dest.resolveSibling(dest.getFileName().toString() + ".branding.tmp");
-                try {
-                    overlayLogo(ffmpegPath(dest.toString()), ffmpegPath(logoPath.toString()), ffmpegPath(tempOut.toString()), v.codec());
-                    Files.move(tempOut, dest, StandardCopyOption.REPLACE_EXISTING);
-                } catch (PipelineException e) {
-                    Files.deleteIfExists(tempOut);
-                    throw e;
-                }
-                branded.add(new TranscodedVideo(v.path(), v.codec(), v.resolution()));
+                String outPath = buildBrandedPath(jobId, v);
+                Files.createDirectories(Path.of(outPath).getParent());
+                overlayLogo(v.path(), ffmpegPath(logoPath), outPath, v.codec());
+                branded.add(new TranscodedVideo(outPath, v.codec(), v.resolution()));
             }
             return branded;
         } catch (PipelineException e) {
             throw e;
         } catch (Exception e) {
-            throw new PipelineException("Regional branding failed", PipelineStageName.COMPLIANCE, e);
+            throw new PipelineException("Regional branding failed", "COMPLIANCE", e);
         } finally {
             try {
                 Files.deleteIfExists(logoPath);
@@ -69,6 +59,15 @@ public class RegionalBrandingService {
                 "-f", "lavfi", "-i", "color=c=0xE50914@0.92:s=320x88:d=1",
                 "-frames:v", "1",
                 ffmpegPath(logoPath)));
+    }
+
+    private String buildBrandedPath(String jobId, TranscodedVideo v) {
+        String fileName = Path.of(v.path()).getFileName().toString();
+        int dot = fileName.lastIndexOf('.');
+        String base = dot > 0 ? fileName.substring(0, dot) : fileName;
+        String ext = dot > 0 ? fileName.substring(dot + 1) : "mp4";
+        return String.format("output/%s/compliance/video/%s/%s_branded.%s",
+                jobId, v.codec(), base, ext);
     }
 
     private void overlayLogo(String inputVideo, String logoPng, String outputVideo, String codec)
