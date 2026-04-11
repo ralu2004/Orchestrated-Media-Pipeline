@@ -3,6 +3,7 @@ package app;
 import app.common.FfmpegRunner;
 import app.common.PipelineStageName;
 import app.orchestrator.Orchestrator;
+import app.orchestrator.ProgressReporter;
 import app.services.analysis.*;
 import app.services.audio.*;
 import app.services.compliance.DefaultComplianceService;
@@ -23,7 +24,7 @@ public final class PipelineFactory {
 
     private PipelineFactory() {}
 
-    public static Orchestrator createOrchestrator(ExecutorService executor) {
+    public static Orchestrator createOrchestrator(ExecutorService executor, ProgressReporter reporter) {
         FfmpegRunner ingestRunner = new FfmpegRunner(PipelineStageName.INGESTING);
         FfmpegRunner analysisRunner = new FfmpegRunner(PipelineStageName.ANALYZING);
         FfmpegRunner visualsRunner = new FfmpegRunner(PipelineStageName.VISUALS);
@@ -52,6 +53,7 @@ public final class PipelineFactory {
                         new SafetyScannerService(complianceRunner),
                         new RegionalBrandingService(complianceRunner)),
                 new DefaultPackagingService(),
-                executor);
+                executor,
+                reporter);
     }
 }

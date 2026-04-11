@@ -2,6 +2,7 @@ package app;
 
 import app.model.JobRequest;
 import app.model.JobStatus;
+import app.orchestrator.ConsoleProgressReporter;
 import app.orchestrator.Orchestrator;
 import app.orchestrator.PipelineJob;
 
@@ -23,7 +24,7 @@ public class Main {
         JobRequest request = new JobRequest(jobId, sourceFile, expectedChecksum);
 
         ExecutorService executor = Executors.newFixedThreadPool(2);
-        Orchestrator orchestrator = PipelineFactory.createOrchestrator(executor);
+        Orchestrator orchestrator = PipelineFactory.createOrchestrator(executor, new ConsoleProgressReporter());
 
         try {
             PipelineJob job = orchestrator.run(request);

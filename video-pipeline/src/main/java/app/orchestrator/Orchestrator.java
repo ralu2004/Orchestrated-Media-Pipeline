@@ -10,13 +10,14 @@ import app.services.ingest.IngestService;
 import app.services.packaging.PackagingService;
 import app.services.visuals.VisualsService;
 
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 
 /**
- * The state machine mediating the workflow. It runs the media pipeline and drives {@link PipelineJob} 
- * through explicit {@link JobStatus} transitions ({@link Transitions}). 
+ * The state machine mediating the workflow. It runs the media pipeline and drives {@link PipelineJob}
+ * through explicit {@link JobStatus} transitions ({@link Transitions}).
  */
 public class Orchestrator {
 
@@ -27,6 +28,7 @@ public class Orchestrator {
     private final ComplianceService complianceService;
     private final PackagingService packagingService;
     private final ExecutorService executor;
+    private final ProgressReporter reporter;
 
     public Orchestrator(IngestService ingestService,
                         AnalysisService analysisService,
@@ -34,7 +36,8 @@ public class Orchestrator {
                         AudioService audioService,
                         ComplianceService complianceService,
                         PackagingService packagingService,
-                        ExecutorService executor) {
+                        ExecutorService executor,
+                        ProgressReporter reporter) {
         this.ingestService = ingestService;
         this.analysisService = analysisService;
         this.visualsService = visualsService;
@@ -42,25 +45,35 @@ public class Orchestrator {
         this.complianceService = complianceService;
         this.packagingService = packagingService;
         this.executor = executor;
+        this.reporter = Objects.requireNonNull(reporter);
     }
 
     public PipelineJob run(JobRequest request) {
         PipelineJob job = new PipelineJob(request);
 
         try {
+            long pipelineStart = System.currentTimeMillis();
+
             // INGESTING
             job.applyTransition(JobStatus.INGESTING);
+            long ingestStart = System.currentTimeMillis();
+            reporter.onStageStarted(JobStatus.INGESTING);
             IngestResult ingestResult = ingestService.process(request);
             job.setIngestResult(ingestResult);
+            reporter.onStageCompleted(JobStatus.INGESTING, System.currentTimeMillis() - ingestStart);
 
             // ANALYZING
             job.applyTransition(JobStatus.ANALYZING);
+            long analysisStart = System.currentTimeMillis();
+            reporter.onStageStarted(JobStatus.ANALYZING);
             AnalysisResult analysisResult = analysisService.process(new AnalysisContext(request, ingestResult));
             job.setAnalysisResult(analysisResult);
+            reporter.onStageCompleted(JobStatus.ANALYZING, System.currentTimeMillis() - analysisStart);
 
-            // PROCESSING
-            // VISUALS
+            // PROCESSING (visuals || audio)
             job.applyTransition(JobStatus.PROCESSING);
+            long processingStart = System.currentTimeMillis();
+            reporter.onStageStarted(JobStatus.PROCESSING);
             CompletableFuture<VisualsResult> visualsFuture = CompletableFuture
                     .supplyAsync(() -> {
                         try {
@@ -69,7 +82,6 @@ public class Orchestrator {
                             throw new RuntimeException(e);
                         }
                     }, executor);
-            // AUDIO
             CompletableFuture<AudioResult> audioFuture = CompletableFuture
                     .supplyAsync(() -> {
                         try {
@@ -85,27 +97,37 @@ public class Orchestrator {
             AudioResult audioResult = getFutureResult(audioFuture);
             job.setVisualsResult(visualsResult);
             job.setAudioResult(audioResult);
+            reporter.onStageCompleted(JobStatus.PROCESSING, System.currentTimeMillis() - processingStart);
 
             // COMPLIANCE
             job.applyTransition(JobStatus.COMPLIANCE);
-            ComplianceResult complianceResult = complianceService.process(
-                    new ComplianceContext(request, visualsResult));
+            long complianceStart = System.currentTimeMillis();
+            reporter.onStageStarted(JobStatus.COMPLIANCE);
+            ComplianceResult complianceResult = complianceService.process(new ComplianceContext(request, visualsResult));
             job.setComplianceResult(complianceResult);
+            reporter.onStageCompleted(JobStatus.COMPLIANCE, System.currentTimeMillis() - complianceStart);
 
             // PACKAGING
             job.applyTransition(JobStatus.PACKAGING);
-            PackagingResult packagingResult = packagingService.process(
-                    new PackagingContext(request, visualsResult, audioResult, complianceResult));
+            long packagingStart = System.currentTimeMillis();
+            reporter.onStageStarted(JobStatus.PACKAGING);
+            PackagingResult packagingResult = packagingService.process(new PackagingContext(request, visualsResult, audioResult, complianceResult));
             job.setPackagingResult(packagingResult);
+            reporter.onStageCompleted(JobStatus.PACKAGING, System.currentTimeMillis() - packagingStart);
 
+            // COMPLETED
             job.applyTransition(JobStatus.COMPLETED);
+            reporter.onPipelineCompleted(System.currentTimeMillis() - pipelineStart);
 
         } catch (PipelineException e) {
+            reporter.onFailed(job.getStatus(), e);
             safeTransitionToFailed(job);
             job.setFailureCause(e);
         } catch (Exception e) {
+            PipelineException pe = new PipelineException("Unexpected error", PipelineStageName.UNKNOWN, e);
+            reporter.onFailed(job.getStatus(), pe);
             safeTransitionToFailed(job);
-            job.setFailureCause(new PipelineException("Unexpected error", PipelineStageName.UNKNOWN, e));
+            job.setFailureCause(pe);
         }
 
         return job;
@@ -115,7 +137,7 @@ public class Orchestrator {
         try {
             job.applyTransition(JobStatus.FAILED);
         } catch (PipelineException ignored) {
-            // already in FAILED or COMPLETED 
+            // already in FAILED or COMPLETED
         }
     }
 
