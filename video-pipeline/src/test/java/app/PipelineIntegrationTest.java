@@ -197,7 +197,9 @@ public class PipelineIntegrationTest {
         assertNotNull(complianceResult.processedVideos());
         assertEquals(visualsResult.transcodedVideos().size(), complianceResult.processedVideos().size());
         for (var v : complianceResult.processedVideos()) {
-            assertTrue(v.path().contains("/compliance/"), "Expected branded output under compliance/: " + v.path());
+            String p = v.path().replace('\\', '/');
+            assertTrue(p.contains("/video/"), "Expected branded output under video/: " + v.path());
+            assertFalse(p.contains("/compliance/"), "Should not use a separate compliance output tree: " + v.path());
             assertTrue(Files.exists(Path.of(v.path())));
         }
     }
