@@ -2,6 +2,7 @@ package app.model;
 
 import java.util.List;
 
+/** Aggregated outputs produced by the analysis phase. */
 public record AnalysisResult(String introEnd, String outroStart, String creditsTimestamp, List<SceneSegment> segments) {
     public AnalysisResult {
         if (introEnd == null || introEnd.isBlank()) {

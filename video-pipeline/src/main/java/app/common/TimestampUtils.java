@@ -1,5 +1,6 @@
 package app.common;
 
+/** Utility helpers for formatting timestamps used by analysis and compliance outputs. */
 public class TimestampUtils {
 
     private TimestampUtils() {}

@@ -10,6 +10,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+/** CLI entry point that builds and runs one pipeline job from command-line arguments. */
 public class Main {
     public static void main(String[] args) {
         if (args.length < 2) {

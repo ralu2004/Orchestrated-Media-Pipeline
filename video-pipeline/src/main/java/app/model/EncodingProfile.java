@@ -1,5 +1,6 @@
 package app.model;
 
+/** Encoding parameters derived from complexity analysis and used by transcoding. */
 public record EncodingProfile(int bitrate, int quality) {
     public EncodingProfile {
         if (bitrate <= 0) {

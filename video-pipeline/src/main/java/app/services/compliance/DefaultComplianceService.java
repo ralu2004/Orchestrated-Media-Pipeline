@@ -4,9 +4,7 @@ import app.common.PipelineException;
 import app.model.ComplianceContext;
 import app.model.ComplianceResult;
 
-/*
-* Runs safety scanning then regional branding. 
-*/
+/** Default compliance stage that performs safety scanning and regional branding. */
 public class DefaultComplianceService implements ComplianceService {
 
     private final SafetyScannerService safetyScanner;

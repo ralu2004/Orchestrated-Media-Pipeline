@@ -1,5 +1,6 @@
 package app.model;
 
+/** Classified scene interval produced by analysis. */
 public record SceneSegment(String startTime, String endTime, String category) {
     public SceneSegment {
         if (startTime == null || startTime.isBlank()) {

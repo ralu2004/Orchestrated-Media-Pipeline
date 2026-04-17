@@ -1,5 +1,6 @@
 package app.model;
 
+/** Lifecycle states used by the orchestrator state machine. */
 public enum JobStatus {
     PENDING,
     INGESTING,

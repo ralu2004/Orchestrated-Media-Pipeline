@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
+/** Default packaging stage that wraps delivery assets and writes the final manifest. */
 public class DefaultPackagingService implements PackagingService {
 
     private final DrmWrapper drmWrapper;

@@ -1,5 +1,6 @@
 package app.common;
 
+/** Exception type used to report pipeline-stage failures with stage metadata. */
 public class PipelineException extends Exception {
     private final String stageName;
 

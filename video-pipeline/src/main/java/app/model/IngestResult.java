@@ -1,5 +1,6 @@
 package app.model;
 
+/** Outputs of ingest validation: checksum and validated format information. */
 public record IngestResult(String actualChecksum, FormatInfo formatInfo) {
     public IngestResult {
         if (actualChecksum == null || actualChecksum.isBlank()) {
