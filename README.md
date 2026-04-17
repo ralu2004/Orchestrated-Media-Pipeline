@@ -42,12 +42,12 @@ flowchart TB
 
 ## Architecture highlights
 
-- `**PipelineStage<I, O>**` — shared generic contract for stage implementations that take typed input and return typed output, with failures surfaced as `PipelineException`.
-- `**FfmpegRunner**` — centralizes safe ffmpeg/ffprobe execution and is supplied per stage via constructor injection.
-- `**DefaultAnalysisService**` — runs the heavy ffmpeg filter passes once, bundles outputs into `RawAnalysisData`, and feeds parsers so intro/outro detection, credit rolling, and scene indexing do not repeat subprocess work.
+- **`PipelineStage<I, O>`** — shared generic contract for stage implementations that take typed input and return typed output, with failures surfaced as `PipelineException`.
+- **`FfmpegRunner`** — centralizes safe ffmpeg/ffprobe execution and is supplied per stage via constructor injection.
+- **`DefaultAnalysisService`** — runs the heavy ffmpeg filter passes once, bundles outputs into `RawAnalysisData`, and feeds parsers so intro/outro detection, credit rolling, and scene indexing do not repeat subprocess work.
 - **Parallelism** — `Orchestrator` runs **Visuals** and **Audio** concurrently with `CompletableFuture` on a dedicated `ExecutorService`. Inside **Analysis**, `IntroOutroDetectorService` and `CreditRollerService` run in parallel; `SceneIndexerService` runs after both complete.
-- `**ProgressReporter`** — implemented by `**ConsoleProgressReporter`** (CLI timestamps and durations) and `**NoOpProgressReporter**`.
-- `**PipelineFactory**` — composition root that wires default implementations into `Orchestrator`.
+- **`ProgressReporter`** — implemented by **`ConsoleProgressReporter`** (CLI timestamps and durations) and **`NoOpProgressReporter`**.
+- **`PipelineFactory`** — composition root that wires default implementations into `Orchestrator`.
 - **Domain model** — Java `record` types with compact constructors for validation; `JobStatus` enum for lifecycle; `SceneSegment` carries scene intervals and a **string** category label.
 - **Context objects** — `AnalysisContext`, `VisualsContext`, `AudioContext`, `ComplianceContext`, and `PackagingContext` pass only what each phase needs instead of one oversized context type.
 
