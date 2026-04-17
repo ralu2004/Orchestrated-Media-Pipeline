@@ -8,6 +8,8 @@ import app.services.audio.*;
 import app.services.compliance.*;
 import app.services.ingest.*;
 import app.services.packaging.DefaultPackagingService;
+import app.services.packaging.DrmWrapper;
+import app.services.packaging.ManifestBuilder;
 import app.services.visuals.*;
 import org.junit.jupiter.api.*;
 
@@ -202,8 +204,7 @@ public class PipelineIntegrationTest {
         assertEquals(visualsResult.transcodedVideos().size(), complianceResult.processedVideos().size());
         for (var v : complianceResult.processedVideos()) {
             String p = v.path().replace('\\', '/');
-            assertTrue(p.contains("/video/"), "Expected branded output under video/: " + v.path());
-            assertFalse(p.contains("/compliance/"), "Should not use a separate compliance output tree: " + v.path());
+            assertTrue(p.contains("/compliance/video/"), "Expected branded output under compliance/video/: " + v.path());
             assertTrue(Files.exists(Path.of(v.path())));
         }
     }
@@ -217,7 +218,9 @@ public class PipelineIntegrationTest {
         if (audioResult == null) audio_phase_works();
         if (complianceResult == null) compliance_phase_works();
 
-        DefaultPackagingService packaging = new DefaultPackagingService();
+        DefaultPackagingService packaging = new DefaultPackagingService(
+                new DrmWrapper(new FfmpegRunner(PipelineStageName.PACKAGING)),
+                new ManifestBuilder());
         PackagingResult result = packaging.process(
                 new PackagingContext(jobRequest, visualsResult, audioResult, complianceResult));
 
@@ -231,7 +234,7 @@ public class PipelineIntegrationTest {
         assertTrue(manifestContent.contains("thumbnails"));
         assertNotNull(result.encryptedAssets());
         assertEquals(complianceResult.processedVideos().size(), result.encryptedAssets().size());
-        assertTrue(manifestContent.contains("simulatedDrmAssets"));
+        assertTrue(manifestContent.contains("drmAssets"));
         for (String drmPath : result.encryptedAssets()) {
             assertTrue(Files.exists(Path.of(drmPath)), "Simulated DRM file should exist: " + drmPath);
             assertTrue(Files.size(Path.of(drmPath)) > 0);
